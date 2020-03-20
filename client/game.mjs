@@ -2,8 +2,6 @@ let LEN;
 let MainMap;
 let piratePathOnX;
 let piratePathOnY;
-let shitPathOnX;
-let shitPathOnY;
 let scriptsForGoods;
 let IDP;
 let i;
@@ -19,16 +17,24 @@ let pirateRouteX;
 let pirateRouteY;
 let PiratesWild;
 let PiratesR;
+let FLAG;
+let wild;
+let GAME_STATE;
 export function startGame(levelMap, gameState) {
+    IDP=0;
+    LEN =0;
+    console.log(gameState);
+    scriptsForGoods=0;
     MovesCount=180;
+    FLAG = false;
+    wild = undefined;
     //инцилизация карты
     MainMap =MAP(levelMap);
     //инцилизация карты
     if(gameState.pirates.length>0){
         Pirates = gameState.pirates.length;
     }
-    piratePathOnX = new Array(Pirates);
-    piratePathOnY = new Array(Pirates);
+
     //начальные координаты
     BeginShipX = gameState.ship.x;
     BeginShipY = gameState.ship.y;
@@ -56,18 +62,26 @@ export function startGame(levelMap, gameState) {
 
 export function getNextCommand(gameState) {
 
-
+    GAME_STATE = gameState;
     if (i === -1) {
         i++;
         return "N";
     }
-    let wild;
-    pirateRoute(gameState.pirates)
-    for (let i = 0; i < PiratesR.length; i++) {
-        if(PiratesWild[i].length-1 <= PiratesR[i]){
-            PiratesR[i]=0;
-        }else{PiratesR[i]++;}
+
+        if (!pirateRoute(gameState.pirates)) {
+            FLAG = true;
+        }
+
+    if(FLAG) {
+        for (let i = 0; i < PiratesR.length; i++) {
+            if (PiratesWild[i].length -1 <= PiratesR[i]) {
+                PiratesR[i] = 0;
+            } else {
+                PiratesR[i]++;
+            }
+        }
     }
+
     if((G>=scriptsForGoods)&&(gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)){
         G=0;
         flagBuy=false;
@@ -76,17 +90,19 @@ export function getNextCommand(gameState) {
         flagBuy=true;
         scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
     }
-
+    // IDP = 3;
     if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
         G++;
         youHome =true;
         MovesCount--;
+        // return "LOAD fish 1"
         return scripts[G-1];
     }
     if((gameState.ship.x === gameState.ports[IDP].x) && (gameState.ship.y ===gameState.ports[IDP].y)&&(G>=scriptsForGoods/2)&&(G<scriptsForGoods)){
         G++;
         youHome = false;
         MovesCount--;
+        // return "SELL fish 1"
         return scripts[G-1];
     }
     if(youHome) {
@@ -94,14 +110,16 @@ export function getNextCommand(gameState) {
     }else{
         wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y)
     }
-    let Pirates = pirateBypass(gameState,wild);
-    if(Pirates){return Pirates};
-    MovesCount--;
-    return wild[0];
+        let Pirates = famousPiratesWild(gameState, wild);
+        if (Pirates) {
+            return Mov(Pirates);
+        }
+    return Mov(wild[0]);
 }
 /////////////////////
 
 function MaxPOfPort(Ports, goods, PortsXY) {
+
     let scripts = [];
     let GOODS;
     let MAXP = 0;
@@ -131,11 +149,11 @@ function MaxPOfPort(Ports, goods, PortsXY) {
         }
     }
     for(let j=0; j<max_x+1;j++) {
-        if(max_x===j){  inp_val1[0][j] = 368}else{ inp_val1[0][j] = goods[j].volume}
+        if(max_x===j){inp_val1[0][j] = 368}else{ inp_val1[0][j] = goods[j].volume}
     }
     for (let j = 0; j < Ports.length; j++) {
         if (MinWildOfPortNum(MainMap, BeginShipX, BeginShipY, PortsXY[j + 1].x, PortsXY[j + 1].y )) {   // проверка на существование пути
-            let numberOfSteps = MinWildOfPortNum(MainMap, BeginShipX, BeginShipY, PortsXY[j + 1].x, PortsXY[j + 1].y).length;
+            let numberOfSteps = MinWildOfPortNum(MainMap, BeginShipX, BeginShipY, PortsXY[j + 1].x, PortsXY[j + 1].y).length-1;
             for(let i=1; i<max_x+1;i++) {
                 inp_val1[i][i-1]=1;
             }
@@ -150,17 +168,55 @@ function MaxPOfPort(Ports, goods, PortsXY) {
                 }
             }
             Fun[max_x]=0;
-           let P =  SimplexMethod(max_x,max_ogran1,inp_val1, Fun);
-           let G = P[0];
+            let P =  SimplexMethod(max_x,max_ogran1,inp_val1, Fun);
+            let G = P[0];
+            let a=0;
+            let weight = 0;
             for(let i=0; i<G.length; i++){
                 G[i]= Math.floor(G[i]);
+                if(G[i]!==0){a+=2;
+                    weight +=G[i] * goods[i].volume;
+                }
+            }
+            let W=0;
+            let m=0;
+            let k;
+            if(weight<368 &&(((numberOfSteps*3))<=MovesCount) ){
+                for(let i=0; i<G.length; i++) {
+                    W=0;
+                while (weight <368){
+                        if(G[i] + W +1 <= goods[i].amount && weight+ W*goods[i].volume + goods[i].volume<=368){
+                            W +=1
+                        } else break;
+                    }
+                    if(W>m){
+                        k= i;
+                        m = W;
+                    }
+                }
+
+            }
+            if(k!==undefined && (G[k]===0)){
+                 G[k] +=m;
+            }else if((k!==undefined && (G[k]!==0))){
+                if (((numberOfSteps*3+(a+2)*3))<=MovesCount) {
+                    G[k] +=m;
+                    a+=2;
+                }
             }
 
-            if(((P[1]/(numberOfSteps))>MAXP)&&((numberOfSteps)<MovesCount)){
-                MAXP = P[1]/(numberOfSteps);
+           P[1] =0;
+            for(let i=0; i<G.length; i++){
+                if(G[i]!==0){
+                    P[1]+=G[i]* Ports[j][Goods[i]];
+                }
+            }
+
+            if((P[1]/((numberOfSteps*2+a))>MAXP)&&(((numberOfSteps+a))<=MovesCount)){
+                MAXP = P[1]/((numberOfSteps*2+a));
                 M= P[1];
                 IDP = Ports[j].portId;
-                GOODS = P[0]
+                GOODS = G;
             }
         }
     }
@@ -181,25 +237,14 @@ function MaxPOfPort(Ports, goods, PortsXY) {
         scriptsForGoods += c;
         scripts = scripts.concat(scripts1)
     }else{
-        console.log("HHA");
-        scriptsForGoods = 0;
-        IDP = 1;
-        scripts[scriptsForGoods] = "WAIT";
-        scriptsForGoods++;
+            scriptsForGoods = 0;
+            IDP = 1;
+            scripts[scriptsForGoods] = "WAIT";
+            scriptsForGoods++;
     }
     return scripts
 }
 
-
-//
-// if ((Ports[j][Goods[i]]) && (goods[i]["amount"] > 0)) {
-//     PriseInPorts[v] = Ports[j][Goods[i]];
-//     volume[v] = goods[i].volume;
-//     amount[v] = goods[i].amount;
-//     name[v] = goods[i].name;
-//     ID[v] = goods[i].id;
-//     v++;
-// }
 
 
 function MAP(gameState) {
@@ -314,7 +359,6 @@ function MinWildOfPortNum(map, x1, y1, x2, y2) { //вычисляет корот
     for(let i=1; i<=len; i++){
         if(py[i]!==py[i-1]){
             if(py[i]>py[i-1]){
-
                 scripts[i-1] = "S"
             }else{
 
@@ -371,18 +415,19 @@ function SimplexMethod(max_x, max_ogran1, inp_val1,Fun) {
     // Последняя строка сама функция
     // Добавим ее в основную матрицу
     matrix.push(Fun);
-
+    // console.log(matrix);
     // Есть ли  отрицательные элементы в матрице свободных членов ?
     if (minElm(free) < 0) {
         iteration = 0; // счетчик итераций, для защиты от зависаний
         step1(); // Переходим к шагу 1
     }
+
     // Есть ли  отрицательные элементы в коэфициентах функции (последняя строчка) ?
     if (minElm(matrix[matrix.length - 1], false, true) < 0) {
         iteration = 0; // счетчик итераций, для защиты от зависаний
         step2(); // Переходим к шагу 2
     }
-    return (results());// Отображаем результаты в понятном виде
+      return (results());// Отображаем результаты в понятном виде
     /*################## ШАГ1 ##################*/
     function step1() {
         iteration++;
@@ -427,7 +472,7 @@ function SimplexMethod(max_x, max_ogran1, inp_val1,Fun) {
         let min_row = 9999;
         let tmp = 0;
         for (i = 0; i < matrix.length - 1; i++) {
-            tmp = Math.floor(free[i] / matrix[i][min_col_num]);
+            tmp = (free[i] / matrix[i][min_col_num]);
             if (tmp < min_row && tmp >= 0) {
                 min_row_num = i;
                 min_row = tmp;
@@ -451,7 +496,7 @@ function SimplexMethod(max_x, max_ogran1, inp_val1,Fun) {
         update_matrix(min_k_num, min_k1_num);
         // матрица свободных членов
         for (var k = 0; k < matrix.length; k++) {
-            free[k] = matrix[k][max_x];
+            free[k] = matrix[k][max_x]
         }
 
         // нужно ли еще разок пройти второй шаг ?
@@ -541,577 +586,304 @@ function minElm(v, dispnum, not_last){
 /**
  * @return {string}
  */
-function pirateBypass(gameState, wild) {
-    let x = gameState.ship.x;
-    let y = gameState.ship.y;
-    if(Pirates>0) {
-        if(piratePathOnX !== undefined) {
-            for (let k = 0; k < Pirates; k++) {
-                let xNow = gameState.pirates[k].x;
-                let yNow = gameState.pirates[k].y;
-                let N;
-                let S;
-                let W;
-                let E;
-                if (yNow < piratePathOnY[k]) {
-                    N = true;
-                    S = false;
-                } else if ((yNow > piratePathOnY[k])) {
-                    N = false;
-                    S = true;
-                } else {
-                    N = false;
-                    S = false;
-                }
+function whereWeAreGoing(xS,yS,distanceX, distanceY, x, y, k, PiratsWild) {
+    let XPort;
+    let YPort;
+    // let map= MainMap;
+    // for(let i=0; i<Pirates; i++) {
+    //     // if(i!==k) {
+    //     MainMap = MapWithP(MainMap, GAME_STATE.pirates[i].x, GAME_STATE.pirates[i].y, i)
+    //     // }
+    // }
+    // // console.log(MainMap)
+    // if(youHome) {
+    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[IDP].x, GAME_STATE.ports[IDP].y)
+    // }else{
+    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[0].x, GAME_STATE.ports[0].y)
+    // }
+    // // console.log("x = " + GAME_STATE.ship.x + " y = " +  GAME_STATE.ship.y)
+    // console.log(MainMap)
+    // MainMap = map;
+    // return wild[0];
 
-                if (xNow > piratePathOnX[k]) {
-                    E = true;
-                    W = false;
-                } else if (xNow < piratePathOnX[k]) {
-                    E = false;
-                    W = true
-                } else {
-                    W = false;
-                    E = false
-                }
-                // console.log("xNow = " + xNow +"; yNow =  " + yNow)
-                if(PiratesWild[k][PiratesR[k]] == "N"){
-                    N=true}
-                if(PiratesWild[k][PiratesR[k]] == "S"){
-                    S=true}
-                if(PiratesWild[k][PiratesR[k]] == "W")
-                {W=true}
-                if(PiratesWild[k][PiratesR[k]] == "E"){
-                    E=true}
-
-
-                if (((x + 2 === xNow) && (y + 2 === yNow)) || ((x + 1 === xNow) && (y + 2 === yNow)) || ((x + 2 === xNow) && (y + 1 === yNow)) || ((x + 1 === xNow) && (y + 1 === yNow))) { //1, фи, A, круглешочик
-                    console.log("1, фи, A, круглешочик")
-                    console.log("x = " + x + "; y = "+ y )
-                    console.log("xN = " + xNow + "; yN = "+ yNow )
-                    if ((wild[0] === "E" || wild[0] === "S")) {
-                        if ((x + 1 === xNow) && (y + 1 === yNow)) {
-                            if ((wild[0] === "E") && W) {
-                                if (MainMap[y - 1][x] !== "#") {
-                                    MovesCount--;
-                                    return "N"
-                                } else {      MovesCount--;
-
-                                    return "W"
-                                }
-                            }
-                            if ((wild[0] === "E") && N) {
-                                if (MainMap[y][x - 1] !== "#") {
-                                    MovesCount--;
-                                    return "W"
-                                } else {
-                                    MovesCount--;
-                                    return "N"
-                                }
-                            }
-                            if ((wild[0] === "S") && W) {
-                                if (MainMap[y - 1][x] !== "#") {
-                                    MovesCount--;
-                                    return "N";
-                                } else {
-                                    MovesCount--;
-                                    return "W"
-                                }
-                            }
-                            if ((wild[0] === "S") && N) {
-                                if (MainMap[y][x - 1] !== "#") {
-                                    MovesCount--;
-                                    return "W";
-                                } else {
-                                    MovesCount--;
-                                    return "N"
-                                }
-                            }
-                        } // A
-                        if ((x + 1 === xNow) && (y + 2 === yNow)) {
-                            if ((wild[0] === "E") && N) {
-                                if (MainMap[y][x - 1] !== "#") {
-                                    MovesCount--;
-                                    return "W"
-                                } else {
-                                    MovesCount--;
-                                    return "N"
-                                }
-                            }
-                            if ((wild[0] === "S") && N) {
-                                if (MainMap[y][x - 1] !== "#") {
-                                    MovesCount--;
-                                    return "W"
-
-                                } else {
-                                    MovesCount--;
-                                    return "N"
-                                }
-                            }
-                            if ((wild[0] === "S") && (W)) {
-                                if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                    return "E"
-                                } else {
-                                    MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                        } // фи
-                        if ((x + 2 === xNow) && (y + 1 === yNow)) {
-                            if ((wild[0] === "E") && W) {
-                                if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                    return "N"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-                            if ((wild[0] === "E") && N) {
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "W"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                            if ((wild[0] === "S") && (W)) {
-                                if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                    return "N"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-
-                        } //нолик
-                        if ((x + 2 === xNow) && (y + 2 === yNow)) {
-                            if (wild[0] === "E" && N) {{
-                                    MovesCount--;
-                                    return "WAIT"
-                            }
-                            if (wild[0] === "S" && W) {{
-                                    MovesCount--;
-                                    return "WAIT"
-                            }
-                        } //1
-                    }
-                }
-
-
-                if (((x - 2 === xNow) && (y + 2 === yNow)) || ((x - 1 === xNow) && (y + 2 === yNow)) || ((x - 2 === xNow) && (y + 1 === yNow)) || ((x - 1 === xNow) && (y + 1 === yNow))) { //2, пси, B, квадратик
-                    console.log("2, пси, B, квадратик")
-                    // console.log("x = " + x + "; y = "+ y )
-                    // console.log("xN = " + xNow + "; yN = "+ yNow )
-                    if ((wild[0] === "W" || wild[0] === "S")) {
-                        if ((x - 1 === xNow) && (y + 1 === yNow)) {
-                            if ((wild[0] === "W") && E) {
-                                if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                    return "N"
-                                } else {      MovesCount--;
-                                    return "E"
-                                }
-                            }
-                            if ((wild[0] === "W") && N) {
-                                if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                    return "E"
-                                } else {      MovesCount--;
-                                    return "N"
-                                }
-                            }
-                            if ((wild[0] === "S") && E) {
-                                if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                    return "N"
-                                } else {      MovesCount--;
-                                    return "E"
-                                }
-                            }
-                            if ((wild[0] === "S") && N) {
-                                if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                    return "E"
-                                } else {      MovesCount--;
-                                    return "N"
-                                }
-                            } // B
-                            if ((x - 1 === xNow) && (y + 2 === yNow)) {
-                                if ((wild[0] === "W") && N) {
-                                    if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                        return "E"
-                                    } else {      MovesCount--;
-                                        return "N"
-                                    }
-                                }
-                                if ((wild[0] === "S") && N) {
-                                    if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                        return "E"
-                                    } else {      MovesCount--;
-                                        return "N"
-                                    }
-                                }
-                                if ((wild[0] === "S") && E) {
-                                    if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                        return "W"
-                                    } else {      MovesCount--;
-                                        return "WAIT"
-                                    }
-                                }
-                            } // пси
-                            if ((x - 2 === xNow) && (y + 1 === yNow)) {
-                                if ((wild[0] === "W") && E) {
-                                    if (MainMap[y - 1][x] !== "#") {
-                                        MovesCount--;
-                                        return "N"
-                                    } else {
-                                        MovesCount--;
-                                        return "W"
-                                    }
-                                }
-                                if ((wild[0] === "W") && N) {
-                                    if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                        return "S"
-                                    } else {      MovesCount--;
-                                        return "WAIT"
-                                    }
-                                }
-                                if ((wild[0] === "S") && E) {
-                                    if (MainMap[y - 1][x] !=="#") {      MovesCount--;
-                                        return "N"
-                                    } else {      MovesCount--;
-                                        return "W"
-                                    }
-                                }
-                            } //квадратик
-                            if ((x - 2 === xNow) && (y + 2 === yNow)) {
-                                if (wild[0] === "W" && N) {
-                                    if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                        return "S"
-                                    } else {      MovesCount--;
-                                        return "WAIT"
-                                    }
-                                }
-                                if (wild[0] === "S" && E) {
-                                    if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                        return "N"
-                                    } else {      MovesCount--;
-                                        return "WAIT"
-                                    }
-                                }
-                            } //2
-                        }
-                    }
-                }
-
-                if (((x + 2 === xNow) && (y - 2 === yNow)) || ((x + 1 === xNow) && (y - 2 === yNow)) || ((x + 2 === xNow) && (y - 1 === yNow)) || ((x + 1 === xNow) && (y - 1 === yNow))) { //3, лямда, C, палочка
-                    console.log("3, лямда, C, палочка")
-                    // console.log("x = " + x + "; y = "+ y )
-                    // console.log("xN = " + xNow + "; yN = "+ yNow )
-                    if ((wild[0] === "E" || wild[0] === "N")) {
-                        if ((x + 1 === xNow) && (y - 1 === yNow)) {
-                            if ((wild[0] === "E") && W) {
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-                            if ((wild[0] === "E") && S) {
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "W"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                            if ((wild[0] === "N") && W) {
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-                            if ((wild[0] === "N") && S) {
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "W"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                        } // C
-                        if ((x + 1 === xNow) && (y - 2 === yNow)) {
-                            if ((wild[0] === "E") && S) {
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "W"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                            if ((wild[0] === "N") && S) {
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "W"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                            if ((wild[0] === "N") && W) {
-                                    return Mov("WAIT")
-                                }
-                        } // лямда
-                        if ((x + 2 === xNow) && (y - 1 === yNow)) {
-                            if ((wild[0] === "E") && W) {
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-                            if ((wild[0] === "E") && S) {
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "W"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                            if ((wild[0] === "N") && W) {
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-                        } //палочка
-                        if ((x + 2 === xNow) && (y - 2 === yNow)) {
-                            // console.log("3")
-                            if (wild[0] === "E" && S) {
-                                // console.log("E")
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "W"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                            if (wild[0] === "N" && W) {
-                                // console.log("N")
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                        } //3
-                    }
-                }
-
-                if (((x - 2 === xNow) && (y - 2 === yNow)) || ((x - 1 === xNow) && (y - 2 === yNow)) || ((x - 2 === xNow) && (y - 1 === yNow)) || ((x - 1 === xNow) && (y - 1 === yNow))) { //D, M, 4, треугольничик
-                    console.log("D, M, 4, треугольник")
-                    //  console.log("x = " + x + "; y = "+ y )
-                    //  console.log("xN = " + xNow + "; yN = "+ yNow )
-                    if ((wild[0] === "W" || wild[0] === "N")) {
-                        if ((x - 1 === xNow) && (y - 1 === yNow)) {
-                            if ((wild[0] === "W") && E) {
-                                // console.log("1")
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    // console.log("S")
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "E"
-                                }
-                            }
-                            if ((wild[0] === "W") && N) {
-                                if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                    return "E"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                            if ((wild[0] === "N") && E) {
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "E"
-                                }
-                            }
-                            if ((wild[0] === "N") && N) {
-                                if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                    return "E"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                        } // D
-                        if ((x - 1 === xNow) && (y - 2 === yNow)) {
-                            if ((wild[0] === "W") && N) {
-                                if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                    return "E"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                            if ((wild[0] === "N") && N) {
-                                if (MainMap[y][x + 1] !== "#") {      MovesCount--;
-                                    return "E"
-                                } else {      MovesCount--;
-                                    return "S"
-                                }
-                            }
-                            if ((wild[0] === "N") && E) {
-                                if (MainMap[y][x - 1] !== "#") {      MovesCount--;
-                                    return "WAIT"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                        } // мю
-                        if ((x - 2 === xNow) && (y - 1 === yNow)) {
-                            if ((wild[0] === "W") && E) {
-                                if (MainMap[y + 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-                            if ((wild[0] === "W") && N) {
-                                if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                    return "WAIT"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                            if ((wild[0] === "N") && E) {
-                                if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                    return "S"
-                                } else {      MovesCount--;
-                                    return "W"
-                                }
-                            }
-                        } //треугольничик
-                        if ((x - 2 === xNow) && (y - 2 === yNow)) {
-                            if (wild[0] === "W" && S) {
-                                if (MainMap[y - 1][x] !== "#") {      MovesCount--;
-                                    return "WAIT"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                            if (wild[0] === "N" && E) {
-                                if (MainMap[y][x-1] !== "#") {      MovesCount--;
-                                    return "WAIT"
-                                } else {      MovesCount--;
-                                    return "WAIT"
-                                }
-                            }
-                        } //4
-                    }
-                }
-                if (((y + 3 === yNow) || (y + 2 === yNow)) && ((x - 1 === xNow) || (x === xNow) || (x + 1 === xNow))) { //!@#%
-                    console.log("!@#%");
-                    if(wild[0]==="S"&&(E||W)){
-                            if (y + 2 === yNow && ((x === xNow)||(((x-1===xNow)&&E)||((x+1===xNow)&&W)))) {
-                                return Mov("WAIT")
-                            } else if (E&&(y + 3 === yNow) && ((x + 1 === xNow) || (x === xNow))) {
-                                return Mov(wild[0])
-                            }else if (W&&(y + 3 === yNow) && ((x - 1 === xNow) || (x === xNow))) {
-                                return Mov(wild[0])
-                            }
-                        }else if(N&&wild[0]==="S") {
-                        if (MainMap[y][x + 1] !== "#") {
-                            return Mov("E")
-                        } else if (MainMap[y][x - 1] !== "#") {
-                            return Mov("W")
-                        }
-                        if (MainMap[y + 1][x] !== "#") {
-                            return Mov("N")
-                        } else {
-                            return Mov("WAIT")
-                        }
-                    }
-                }
-                if (((y - 3 === yNow) || (y - 2 === yNow)) && ((x - 1 === xNow) || (x === xNow) || (x + 1 === xNow))) { //BKNM
-        console.log("BKNM")
-                    if(wild[0]==="N"&&(E||W)){
-                        console.log("y: " + y + "; x: "+ x)
-                        console.log("yNow: " + yNow + "; xNow: "+ xNow)
-                        if (y - 2 === yNow && ((x === xNow)||(((x-1===xNow)&&E)||((x+1===xNow)&&W)))) {
-                            return Mov("WAIT")
-                        } else if (E&&(y - 3 === yNow) && ((x + 1 === xNow) || (x === xNow))) {
-                            return Mov(wild[0])
-                        }else if (W&&(y - 3 === yNow) && ((x - 1 === xNow) || (x === xNow))) {
-                            return Mov(wild[0])
-                        }
-                    }else if(S&&wild[0]==="N") {
-                        if (MainMap[y][x + 1] !== "#") {
-                            return Mov("E")
-                        } else if (MainMap[y][x - 1] !== "#") {
-                            return Mov("W")
-                        }
-                        if (MainMap[y - 1][x] !== "#") {
-                            return Mov("S")
-                        } else {
-                            return Mov("WAIT")
-                        }
-
-                    }
-                }
-                if (((x - 2 === xNow) || (x - 3 === xNow)) && ((y + 1 === yNow) || (y === yNow) || (y - 1 === yNow))) { //zxcv
-                    // console.log("zxcv")
-                    if(N||S){
-                        if(wild[0]==="E"){      MovesCount--;
-                            return "WAIT"
-                        }
-                    }
-                    if(E&&(wild[0]==="W")){
-                        if(y-2===yNow) {      MovesCount--;
-                            return "W"
-                        }else if(y+2===yNow){      MovesCount--;return "W"}else {
-                            if(y===yNow){
-                                if(MainMap[y+1][x]!=="#"){    MovesCount--;return "S"}else{  MovesCount--;return "N"}
-                            }
-
-                        }
-                    }
-                }
-                if (((x + 2 === xNow) &&(y === yNow)) || (((x + 3 === xNow)) && ((y - 1 === yNow) || (y === yNow) || (y + 1 === yNow)))) { //OIPU
-                    console.log("OIPU");
-                    console.log("E: " + E + "; W: " + W + "; S: " + S + "; N: "+ N);
-                    console.log("y: " + y + "; x: "+ x);
-                    console.log("yNow: " + yNow + "; xNow: "+ xNow);
-                    console.log(wild[0]);
-                    if(wild[0]==="E"&&(S||N)){
-                        if ((x + 2 === xNow) && ((y=== yNow)||((y-1===yNow)&&N)||((y+1===yNow))&&S)) {
-                            if(y===yNow){Mov("W")}
-                            return Mov("WAIT")
-                      } else if (N&&(x+ 3 === xNow) &&((y + 1 === yNow) || (y === yNow))) {
-                            return Mov(wild[0])
-                          }else if (S&&(x + 3 === xNow) && ((y - 1 === yNow) || (y === yNow))) {
-                            return Mov(wild[0])
-                        }
-                    }else if(W&&(wild[0]==="E")) {
-                        if (MainMap[y+1][x] !== "#") {
-                            return Mov("S")
-                        } else if (MainMap[y-1][x] !== "#") {
-                            return Mov("N")
-                        }
-                        if (MainMap[y][x-1] !== "#") {
-                            return Mov("W")
-                        } else {
-                            return Mov("WAIT")
-                        }
-                    }
-                }
+    if(!youHome)
+    {
+        XPort = GAME_STATE.ports[0].x;
+        YPort = GAME_STATE.ports[0].y;
+    }else{
+        XPort = GAME_STATE.ports[IDP].x;
+        YPort = GAME_STATE.ports[IDP].y;
+    }
+    //
+    if((distanceX===0 && distanceY===1)&&(wild[0]==="S")){ // N0
+        let WILD = "N";
+        let WILD1 = "N";
+        let wi =0;
+        if(XPort > xS){WILD="E";WILD1="W"; wi=+1}
+        if(XPort < xS){WILD="W"; WILD1="E";wi = -1}
+        if(XPort === xS){WILD="N"; WILD1="W";wi = -1}
+            if (PiratsWild === "E") {
+                if (MainMap[yS][xS +wi] !== "#") return WILD; else return "N"
+            }//если нада - доделеать
+            if (PiratsWild === "W") {
+                if (MainMap[yS][xS +wi] !== "#") return WILD; else return "N"
+            } //если нада - доделеать
+            if (PiratsWild === "N") {
+                if (MainMap[yS][xS +wi] !== "#") return WILD; else if (MainMap[yS][xS -wi] !== "#") return WILD1; else return "N"
             }
-        }
-        for(let k=0; k<Pirates; k++){
-            piratePathOnX[k] = gameState.pirates[k].x;
-            piratePathOnY[k] =gameState.pirates[k].y;
-            shitPathOnX = gameState.ship.x;
-            shitPathOnY = gameState.ship.y;
+            if (PiratsWild === "S") {
+                if (MainMap[yS][xS +wi] !== "#") return WILD; else if (MainMap[y][x -wi] !== "#") return WILD1; else return "N";
+            }
+    }
+    if((distanceX===0 && distanceY===-1)&&(wild[0]==="N")){//S0
+        let WILD = "S";
+        let WILD1 = "S";
+        let wi =0;
+        let wj=0;
+        if(XPort > xS){WILD="E";WILD1="W"; wi = 1}
+        if(XPort < xS){WILD="W"; WILD1="E";wi = -1}
+        if(XPort === xS){WILD="S"; wj = 1; WILD1="E";wi = +1}
+            if (PiratsWild === "E") {
+                if (MainMap[yS+wj][xS+wi] !== "#") return WILD; else return "S"
+            }//если нада - доделеать
+            if (PiratsWild === "W") {
+                if (MainMap[yS+wj][xS+wi] !== "#") return WILD; else return "S"
+            }//если нада - доделеать
+            if (PiratsWild === "S") {
+                if (MainMap[y+wj][xS] !== "#") return WILD; else if (MainMap[yS][xS + wi] !== "#") return WILD1; else return "S"
+            }
+    }
+    if((distanceX===1&&distanceY===0)&&(wild[0]==="E")){//W0
+        let WILD = "W";
+        let WILD1 = "W";
+        let wi =0;
+        if(YPort > yS){WILD="S";WILD1="N"; wi=+1}
+        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
+        if(YPort === yS){WILD="W"; WILD1="S";wi = -1}
+        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="W"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "W"}
+        if(PiratsWild==="E"){if(MainMap[yS+wi][xS]!=="#") return WILD; else  return WILD1}//если нада - доделеать
+    }
+    if((distanceX===-1&&distanceY===0)&&(wild[0]==="W")){//E0
+        let WILD = "E";
+        let WILD1 = "E";
+        let wi =0;
+        if(YPort > yS){WILD="S";WILD1="N"; wi= +1}
+        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
+        if(YPort === yS){WILD="E"; WILD1="S";wi = -1}
+        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="E"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "E"}
+        if(PiratsWild==="W"){if(MainMap[yS+wi][xS]!=="#") return WILD; else  return WILD1}//если нада - доделеать
+    }
+    //
+    if((distanceX===0 && distanceY===2)&&(wild[0]==="S")){ // N
+        let WILD = "S";
+        let WILD1 = "S";
+        let wi =0;
+        if(XPort > xS){WILD="E";WILD1="W"; wi=+1}
+        if(XPort < xS){WILD="W"; WILD1="E";wi = -1}
+        if(XPort === xS){WILD="W"; WILD1="E";wi = -1}
+
+            if (PiratsWild === "E") {
+                if (MainMap[yS][xS +wi] !== "#") return WILD; else return WILD1
+            }//если нада - доделеать
+            if (PiratsWild === "W") {
+                if (MainMap[yS][xS + wi] !== "#") return WILD; else return WILD1
+            } //если нада - доделеать
+            if (PiratsWild === "N") {
+                if (MainMap[yS][xS + wi] !== "#") return WILD; else if (MainMap[yS][xS - wi] !== "#") return WILD1; else if(MainMap[yS-1][xS]!=="#")return "N";else return "WAIT"
+            }
+    }
+    if((distanceX===0 && distanceY===-2)&&(wild[0]==="N")){//S
+        let WILD = "S";
+        let WILD1 = "S";
+        let wi =0;
+        if(XPort >= xS){WILD="E";WILD1="W"; wi=+1}
+        if(XPort <= xS){WILD="W"; WILD1="E";wi = -1}
+            if (PiratsWild === "E") {
+                if (MainMap[yS][xS +wi] !== "#") return WILD; else return WILD1
+            }//если нада - доделеать
+            if (PiratsWild === "W") {
+                if (MainMap[yS][xS + wi] !== "#") return WILD; else return WILD1
+            }//если нада - доделеать
+            if (PiratsWild === "S") {
+                if (MainMap[yS][xS + wi] !== "#") return WILD; else if (MainMap[yS][xS - wi] !== "#") return WILD1; else return "S"
+            }
+    }
+    if((distanceX===2&&distanceY===0)&&(wild[0]==="E")){//W
+        // console.log("W0")
+        let WILD = "W";
+        let WILD1 = "W";
+        let wi =0;
+        if(YPort > yS){WILD="S";WILD1="N"; wi=+1}
+        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
+        if(YPort === yS){WILD="N"; WILD1="S";wi = -1}
+        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="W"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "W"}
+    }
+    if((distanceX===-2&&distanceY===0)&&(wild[0]==="W")){
+        let WILD = "E";
+        let WILD1 = "E";
+        let wi =0;
+        if(YPort > yS){WILD="S";WILD1="N"; wi=+1}
+        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
+        if(YPort === yS){WILD="N"; WILD1="S";wi = -1}
+        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
+        if(PiratsWild==="E"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "E"}
+    }
+    //
+    if(distanceX===1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="E")){ //q
+       if( PiratsWild==="W"&&wild[0]==="E"){
+            return "WAIT"
+       }
+        if( PiratsWild==="N"&&wild[0]==="S"){
+            return "WAIT"
         }
     }
-    return undefined
+    if(distanceX===-1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="W")){//s
+        if(PiratsWild==="E"){
+           return "WAIT"
+        }
+        if( PiratsWild==="N"){
+          return "WAIT"
+        }
+    }
+    if(distanceX===1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="E")){//t
+        if( PiratsWild==="W"){
+            return "WAIT"
+        }
+        if( PiratsWild==="S"){
+         return "WAIT"
+        }
+    }
+    if(distanceX===-1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="W")){//c
+        if( PiratsWild==="E"){
+            return "WAIT"
+        }
+        if( PiratsWild==="S"){
+           return "WAIT"
+        }
+    }
+    //
 }
+function MapWithP(MAP, x, y, k) {
+    let x1=[];
+    for (let i=0; i<MAP.length; i++) {
+        x1[i] = []
+    }
+    for(let i=0; i<MAP.length; i++){
+        for(let j=0; j<MAP[0].length; j++){
+            x1[i][j] = MAP[i][j]
+        }
+    }
+    // for(let i=x-1; i<=(x+1); i++){
+    //     for(let j=y-1; j<=(y+1); j++){
+    //         x1[j][i] = "#"
+    //     }
+    // }
+    let X2=1;
+    let X1=1;
+    if(DeterminationWild(x,y,k) ==="E"){
+        X2 = 2;
+    }
+    if(DeterminationWild(x,y,k)==="W"){
+        X1 = 2;
+    }
+    let Y2=1;
+    let Y1=1;
+    if(DeterminationWild(x,y,k) ==="N"){
+        Y2 = 2;
+    }
+    if(DeterminationWild(x,y,k)==="S"){
+        Y1 = 2;
+    }
+    for(let i=x-X1; i<=(x+X2); i++){
+            x1[y][i] = "#"
+    }
+    for(let i=y-Y1; i<=(y+Y2); i++){
+            x1[i][x] = "#"
+    }
+    x1[GAME_STATE.ship.y][GAME_STATE.ship.x ] = "~";
+    return x1;
+}
+function angleDetermination(angle, xP, yP, xS, yS, distanceX, distanceY, x, y, k) {
+    let PWild;
+    let map= MainMap;
+    for(let i=0; i<Pirates; i++) {
+        if(i!==k) {
+            MainMap = MapWithP(MainMap, GAME_STATE.pirates[i].x, GAME_STATE.pirates[i].y)
+        }
+    }
+    if(FLAG) {
+        PWild = PiratesWild[k][PiratesR[k]];
+    }else{
+        PWild = DeterminationWild(xP,yP,k)
+    }
+        if((xS+distanceX+x===xP)&&(yS+distanceY+y===yP)){angle[0] = true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, distanceY, x, y, k,PWild )}
+        if((xS-distanceX===xP)&&(yS+distanceY===yP)){angle[1]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX, distanceY, x, y, k, PWild)}
+        if((xS+distanceX===xP)&&(yS-distanceY-y===yP)){angle[2]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, -distanceY, x, y, k, PWild)}
+        if((xS-distanceX-x===xP)&&(yS-distanceY===yP)){angle[3]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX, -distanceY, x, y, k, PWild)}
+        MainMap = map;
+}
+function ThereIsAProblem (){}
+function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
+    let x = gameState.ship.x;
+    let y = gameState.ship.y;
+    let angle;
+    for (let k = 0; k < Pirates; k++) {
+        let angleQSTE = {q: false, s: false, t: false, e: false, FLAG: false, wild:""};
+        let angleABCD = {A: false, B: false, C: false, D: false, FLAG: false, wild:""};
+        let angleZXCV = {z: false, x: false, c: false, v: false , FLAG: false, wild:""};
+        let angleUIOP = {u: false, i: false, o: false, p: false, FLAG: false, wild:""};
+        let angleNN0SS0 = {N: false, N0: false, S: false, S0: false, FLAG: false, wild:""};
+        let angleWW0EE0 = {W: false, W0: false, E: false, E0: false, FLAG: false, wild:""};
+        angleDetermination(angleQSTE, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 1, 0, 0, k);
+        angleDetermination(angleABCD, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 2, 0, 0,k);
+        angleDetermination(angleZXCV, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 2, 0, 0, k);
+        angleDetermination(angleUIOP, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 1, 0, 0, k);
+        angleDetermination(angleNN0SS0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 0, 1, 0, 1, k);
+        angleDetermination(angleWW0EE0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 0, 1, 0, k);
 
-
+        if(angleQSTE[4]==true){
+            angle =angleQSTE[5];
+        }else if (angleABCD[4]==true){
+            angle =angleABCD[5];
+        }else if (angleZXCV[4]==true){
+            angle =angleZXCV[5];
+        }else if (angleUIOP[4]==true){
+            angle =angleUIOP[5];
+        }else if (angleNN0SS0[4]==true){
+            angle =angleNN0SS0[5];
+        }else if (angleWW0EE0[4]==true){
+            angle =angleWW0EE0[5];
+        }
+        if(angle!==undefined){
+            return angle
+        }
+    }
+    return angle
+}
 function Mov(mov) {
     MovesCount--;
     return mov
 }
 
-
+function DeterminationWild(xP,yP) {
+    if(piratePathOnX !== undefined){
+        if(piratePathOnX>xP) return "W"
+        if(piratePathOnX<xP) return "E"
+        if(piratePathOnY>yP) return "S"
+        if(piratePathOnY>yP) return "N"
+    }
+    piratePathOnX = xP;
+    piratePathOnY = yP;
+}
 function pirateRoute(Pirates) {
+    if(FLAG === true) return false;
     let flag = 0;
     for(let i=0; i<PiratesWild.length; i++){
         if(PiratesWild[i].length>1){
@@ -1123,10 +895,13 @@ function pirateRoute(Pirates) {
             if (!(pirateRouteX[i][0] === Pirates[i].x && pirateRouteY[i][0] === Pirates[i].y)) {
                 pirateRouteX[i][pirateRouteX[i].length] = Pirates[i].x;
                 pirateRouteY[i][pirateRouteY[i].length] = Pirates[i].y;
+                PiratesR[i]++;
             } else {
                 pirateRouteX[i][pirateRouteX[i].length] = Pirates[i].x;
                 pirateRouteY[i][pirateRouteY[i].length] = Pirates[i].y;
+                PiratesR[i]=0;
                 for (let j = 0; j < pirateRouteX[i].length-1; j++) {
+
                     if (pirateRouteX[i][j] != pirateRouteX[i][j + 1]) {
                         if (pirateRouteX[i][j] <= pirateRouteX[i][j + 1]) {
                             PiratesWild[i][j] = "E"
@@ -1141,18 +916,12 @@ function pirateRoute(Pirates) {
                         }
                     }
                 }
+
             }
         }
         return true;
     }else{
-        for (let i=0; i<Pirates.length; i++){
-            for(let j=0 ; j<pirateRouteX[i].length; j++){
-                if(pirateRouteX[i][j] === Pirates[i].x && pirateRouteY[i][j] === Pirates[i].y){
-                    PiratesR[i] = j-1;
-                }
-            }
-        }
         return false
     }
-
+    return true;
 }
