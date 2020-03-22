@@ -13,6 +13,8 @@ let Pirates;
 let BeginShipX;
 let BeginShipY;
 let MovesCount;
+let ShipRouteX;
+let ShipRouteY;
 let pirateRouteX;
 let pirateRouteY;
 let PiratesWild;
@@ -23,7 +25,7 @@ let GAME_STATE;
 export function startGame(levelMap, gameState) {
     IDP=0;
     LEN =0;
-    console.log(gameState);
+    // console.log(gameState);
     scriptsForGoods=0;
     MovesCount=180;
     FLAG = false;
@@ -48,11 +50,13 @@ export function startGame(levelMap, gameState) {
     for(let i=0; i<Pirates; i++){
         pirateRouteX[i] = [];
         pirateRouteY[i] = [];
+        // pirateRouteX[i][0]
+        // pirateRouteY[i][0];
         PiratesWild[i] = [];
         PiratesR[i] = -1;
     }
 
-    i=-1;
+    i=-43;
     G=0;
     flagBuy=false;
     youHome=true;
@@ -61,17 +65,14 @@ export function startGame(levelMap, gameState) {
 
 
 export function getNextCommand(gameState) {
-
-    GAME_STATE = gameState;
-    if (i === -1) {
+    if (i<-42) {
         i++;
-        return "N";
+        return "WAIT";
     }
-
-        if (!pirateRoute(gameState.pirates)) {
-            FLAG = true;
-        }
-
+    GAME_STATE = gameState;
+    if (!pirateRoute(gameState.pirates)) {
+        FLAG = true;
+    }
     if(FLAG) {
         for (let i = 0; i < PiratesR.length; i++) {
             if (PiratesWild[i].length -1 <= PiratesR[i]) {
@@ -82,6 +83,8 @@ export function getNextCommand(gameState) {
         }
     }
 
+
+
     if((G>=scriptsForGoods)&&(gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)){
         G=0;
         flagBuy=false;
@@ -89,8 +92,8 @@ export function getNextCommand(gameState) {
     if(!flagBuy) {
         flagBuy=true;
         scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
-    }
-    // IDP = 3;
+     }
+    // IDP = 5;
     if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
         G++;
         youHome =true;
@@ -107,13 +110,25 @@ export function getNextCommand(gameState) {
     }
     if(youHome) {
         wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[IDP].x, gameState.ports[IDP].y)
+        // console.log("Home: " + wild[0])
+        // if(wild[0]===undefined){
+        //     console.log("f")
+        // }
     }else{
-        wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y)
+        wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y);
+        console.log(wild[0])
     }
         let Pirates = famousPiratesWild(gameState, wild);
         if (Pirates) {
+            // console.log("Pir : "+ Pirates)
+            // if(Pirates==="WAIT"){
+            //     console.log("WAIT")
+            // }
             return Mov(Pirates);
         }
+// if(wild[0]==="WAIT") {
+//     console.log(wild[0]);
+// }
     return Mov(wild[0]);
 }
 /////////////////////
@@ -262,120 +277,7 @@ function MAP(gameState) {
 /**
  * @return {[]}*/
 
-function MinWildOfPortNum(map, x1, y1, x2, y2) { //вычисляет коротчайший путь до порта
-    let scripts = [];
 
-    let H = map.length-1;         // ширина рабочего поля  13
-    let W = map[0].length-1;         // высота рабочего поля  18
-    let WALL = -1;         // непроходимая ячейка
-    let BLANK = -2;         // свободная непомеченная ячейка
-
-
-    let px= [], py = [];      // координаты ячеек, входящих  путь
-    let len;                       // длина пути
-    let grid = new Array(H);
-
-    for (let i = 0; i <= H; i++) {
-        grid[i] = new Array (W);
-        for (let j = 0; j <= W; j++) {
-            if (map[i][j].localeCompare("~")===0) {
-                grid[i][j] = -2;
-            }
-            else if(map[i][j].localeCompare("#")===0){
-                grid[i][j] = -1;
-            }else{grid[i][j] = -2;}
-        }
-    }
-    // if(gameState.pirates.length>1) {
-    //     for(let i=0; i<gameState.pirates.length; i++) {
-    //         grid = MapWithP(grid, gameState.pirates[i].x, gameState.pirates[i].y)
-    //     }
-    // }
-    let ax= x1;
-    let ay= y1;
-    let bx =x2;
-    let by =y2;
-
-    let dx = [1, 0, -1, 0 ];   // смещения, соответствующие соседям ячейки
-    let dy = [ 0, 1, 0, -1 ];   // справа, снизу, слева и сверху
-    let  d, x, y, k;
-    let stop;
-    if (grid[ay][ax] === WALL || grid[by][bx] === WALL) {return false; } // ячейка (ax, ay) или (bx, by) - стена
-
-    // распространение волны
-    d = 0;
-    grid[ay][ax] = 0;            // стартовая ячейка помечена 0
-
-
-    do {
-        stop = true;               // предполагаем, что все свободные клетки уже помечены
-        for (y = 0; y < H; ++y)
-            for (x = 0; x < W; ++x)
-                if (grid[y][x] === d)                         // ячейка (beginShipX, beginShipY) помечена числом d
-                {
-                    for (k = 0; k < 4; ++k)                    // проходим по всем непомеченным соседям
-                    {
-                        let iy = y + dy[k], ix = x + dx[k];
-                        if (iy >= 0 && iy < H && ix >= 0 && ix < W &&
-                            grid[iy][ix] === BLANK)
-                        {
-                            stop = false;              // найдены непомеченные клетки
-                            grid[iy][ix] = d + 1;      // распространяем волну
-                        }
-                    }
-                }
-        d++;
-    } while (!stop && grid[by][bx] === BLANK);
-    if (grid[by][bx] === BLANK){return false;}   // путь не найден
-
-    // восстановление пути
-    len = grid[by][bx];            // длина кратчайшего пути из (ax, ay) в (bx, by)
-
-    LEN =len;
-    x = bx;
-    y = by;
-    d = len;
-    while (d > 0)
-    {
-        px[d] = x;
-        py[d] = y;                   // записываем ячейку (beginShipX, beginShipY) в путь
-        d--;
-        for (k = 0; k < 4; ++k)
-        {
-            let iy = y + dy[k], ix = x + dx[k];
-            if (iy >= 0 && iy < H && ix >= 0 && ix < W &&
-                grid[iy][ix] === d)
-            {
-                x = x + dx[k];
-                y = y + dy[k];           // переходим в ячейку, которая на 1 ближе к старту
-                break;
-            }
-        }
-    }
-
-    px[0] = ax;
-    py[0] = ay;                    // теперь px[0..len] и py[0..len] - координаты ячеек пути
-
-    for(let i=1; i<=len; i++){
-        if(py[i]!==py[i-1]){
-            if(py[i]>py[i-1]){
-                scripts[i-1] = "S"
-            }else{
-
-                scripts[i-1] = "N"
-            }
-        }else if(px[i]!==px[i-1]){
-            if(px[i]>px[i-1]){
-
-                scripts[i-1] = "E"
-            }else{
-
-                scripts[i-1] = "W"
-            }
-        }
-    }
-    return scripts;
-}
 
 ///СИМПЛИКС МЕТОД
 /**
@@ -586,190 +488,7 @@ function minElm(v, dispnum, not_last){
 /**
  * @return {string}
  */
-function whereWeAreGoing(xS,yS,distanceX, distanceY, x, y, k, PiratsWild) {
-    let XPort;
-    let YPort;
-    // let map= MainMap;
-    // for(let i=0; i<Pirates; i++) {
-    //     // if(i!==k) {
-    //     MainMap = MapWithP(MainMap, GAME_STATE.pirates[i].x, GAME_STATE.pirates[i].y, i)
-    //     // }
-    // }
-    // // console.log(MainMap)
-    // if(youHome) {
-    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[IDP].x, GAME_STATE.ports[IDP].y)
-    // }else{
-    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[0].x, GAME_STATE.ports[0].y)
-    // }
-    // // console.log("x = " + GAME_STATE.ship.x + " y = " +  GAME_STATE.ship.y)
-    // console.log(MainMap)
-    // MainMap = map;
-    // return wild[0];
 
-    if(!youHome)
-    {
-        XPort = GAME_STATE.ports[0].x;
-        YPort = GAME_STATE.ports[0].y;
-    }else{
-        XPort = GAME_STATE.ports[IDP].x;
-        YPort = GAME_STATE.ports[IDP].y;
-    }
-    //
-    if((distanceX===0 && distanceY===1)&&(wild[0]==="S")){ // N0
-        let WILD = "N";
-        let WILD1 = "N";
-        let wi =0;
-        if(XPort > xS){WILD="E";WILD1="W"; wi=+1}
-        if(XPort < xS){WILD="W"; WILD1="E";wi = -1}
-        if(XPort === xS){WILD="N"; WILD1="W";wi = -1}
-            if (PiratsWild === "E") {
-                if (MainMap[yS][xS +wi] !== "#") return WILD; else return "N"
-            }//если нада - доделеать
-            if (PiratsWild === "W") {
-                if (MainMap[yS][xS +wi] !== "#") return WILD; else return "N"
-            } //если нада - доделеать
-            if (PiratsWild === "N") {
-                if (MainMap[yS][xS +wi] !== "#") return WILD; else if (MainMap[yS][xS -wi] !== "#") return WILD1; else return "N"
-            }
-            if (PiratsWild === "S") {
-                if (MainMap[yS][xS +wi] !== "#") return WILD; else if (MainMap[y][x -wi] !== "#") return WILD1; else return "N";
-            }
-    }
-    if((distanceX===0 && distanceY===-1)&&(wild[0]==="N")){//S0
-        let WILD = "S";
-        let WILD1 = "S";
-        let wi =0;
-        let wj=0;
-        if(XPort > xS){WILD="E";WILD1="W"; wi = 1}
-        if(XPort < xS){WILD="W"; WILD1="E";wi = -1}
-        if(XPort === xS){WILD="S"; wj = 1; WILD1="E";wi = +1}
-            if (PiratsWild === "E") {
-                if (MainMap[yS+wj][xS+wi] !== "#") return WILD; else return "S"
-            }//если нада - доделеать
-            if (PiratsWild === "W") {
-                if (MainMap[yS+wj][xS+wi] !== "#") return WILD; else return "S"
-            }//если нада - доделеать
-            if (PiratsWild === "S") {
-                if (MainMap[y+wj][xS] !== "#") return WILD; else if (MainMap[yS][xS + wi] !== "#") return WILD1; else return "S"
-            }
-    }
-    if((distanceX===1&&distanceY===0)&&(wild[0]==="E")){//W0
-        let WILD = "W";
-        let WILD1 = "W";
-        let wi =0;
-        if(YPort > yS){WILD="S";WILD1="N"; wi=+1}
-        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
-        if(YPort === yS){WILD="W"; WILD1="S";wi = -1}
-        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="W"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "W"}
-        if(PiratsWild==="E"){if(MainMap[yS+wi][xS]!=="#") return WILD; else  return WILD1}//если нада - доделеать
-    }
-    if((distanceX===-1&&distanceY===0)&&(wild[0]==="W")){//E0
-        let WILD = "E";
-        let WILD1 = "E";
-        let wi =0;
-        if(YPort > yS){WILD="S";WILD1="N"; wi= +1}
-        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
-        if(YPort === yS){WILD="E"; WILD1="S";wi = -1}
-        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="E"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "E"}
-        if(PiratsWild==="W"){if(MainMap[yS+wi][xS]!=="#") return WILD; else  return WILD1}//если нада - доделеать
-    }
-    //
-    if((distanceX===0 && distanceY===2)&&(wild[0]==="S")){ // N
-        let WILD = "S";
-        let WILD1 = "S";
-        let wi =0;
-        if(XPort > xS){WILD="E";WILD1="W"; wi=+1}
-        if(XPort < xS){WILD="W"; WILD1="E";wi = -1}
-        if(XPort === xS){WILD="W"; WILD1="E";wi = -1}
-
-            if (PiratsWild === "E") {
-                if (MainMap[yS][xS +wi] !== "#") return WILD; else return WILD1
-            }//если нада - доделеать
-            if (PiratsWild === "W") {
-                if (MainMap[yS][xS + wi] !== "#") return WILD; else return WILD1
-            } //если нада - доделеать
-            if (PiratsWild === "N") {
-                if (MainMap[yS][xS + wi] !== "#") return WILD; else if (MainMap[yS][xS - wi] !== "#") return WILD1; else if(MainMap[yS-1][xS]!=="#")return "N";else return "WAIT"
-            }
-    }
-    if((distanceX===0 && distanceY===-2)&&(wild[0]==="N")){//S
-        let WILD = "S";
-        let WILD1 = "S";
-        let wi =0;
-        if(XPort >= xS){WILD="E";WILD1="W"; wi=+1}
-        if(XPort <= xS){WILD="W"; WILD1="E";wi = -1}
-            if (PiratsWild === "E") {
-                if (MainMap[yS][xS +wi] !== "#") return WILD; else return WILD1
-            }//если нада - доделеать
-            if (PiratsWild === "W") {
-                if (MainMap[yS][xS + wi] !== "#") return WILD; else return WILD1
-            }//если нада - доделеать
-            if (PiratsWild === "S") {
-                if (MainMap[yS][xS + wi] !== "#") return WILD; else if (MainMap[yS][xS - wi] !== "#") return WILD1; else return "S"
-            }
-    }
-    if((distanceX===2&&distanceY===0)&&(wild[0]==="E")){//W
-        // console.log("W0")
-        let WILD = "W";
-        let WILD1 = "W";
-        let wi =0;
-        if(YPort > yS){WILD="S";WILD1="N"; wi=+1}
-        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
-        if(YPort === yS){WILD="N"; WILD1="S";wi = -1}
-        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="W"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "W"}
-    }
-    if((distanceX===-2&&distanceY===0)&&(wild[0]==="W")){
-        let WILD = "E";
-        let WILD1 = "E";
-        let wi =0;
-        if(YPort > yS){WILD="S";WILD1="N"; wi=+1}
-        if(YPort < yS){WILD="N"; WILD1="S";wi = -1}
-        if(YPort === yS){WILD="N"; WILD1="S";wi = -1}
-        if(PiratsWild==="S"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="N"){if(MainMap[yS+wi][xS]!=="#") return WILD; else return WILD1}//если нада - доделеать
-        if(PiratsWild==="E"){if(MainMap[yS+wi][xS]!=="#") return WILD; else if(MainMap[yS-wi][xS]!=="#")return WILD1; else return "E"}
-    }
-    //
-    if(distanceX===1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="E")){ //q
-       if( PiratsWild==="W"&&wild[0]==="E"){
-            return "WAIT"
-       }
-        if( PiratsWild==="N"&&wild[0]==="S"){
-            return "WAIT"
-        }
-    }
-    if(distanceX===-1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="W")){//s
-        if(PiratsWild==="E"){
-           return "WAIT"
-        }
-        if( PiratsWild==="N"){
-          return "WAIT"
-        }
-    }
-    if(distanceX===1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="E")){//t
-        if( PiratsWild==="W"){
-            return "WAIT"
-        }
-        if( PiratsWild==="S"){
-         return "WAIT"
-        }
-    }
-    if(distanceX===-1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="W")){//c
-        if( PiratsWild==="E"){
-            return "WAIT"
-        }
-        if( PiratsWild==="S"){
-           return "WAIT"
-        }
-    }
-    //
-}
 function MapWithP(MAP, x, y, k) {
     let x1=[];
     for (let i=0; i<MAP.length; i++) {
@@ -780,31 +499,26 @@ function MapWithP(MAP, x, y, k) {
             x1[i][j] = MAP[i][j]
         }
     }
-    // for(let i=x-1; i<=(x+1); i++){
-    //     for(let j=y-1; j<=(y+1); j++){
-    //         x1[j][i] = "#"
-    //     }
-    // }
     let X2=1;
     let X1=1;
-    if(DeterminationWild(x,y,k) ==="E"){
-        X2 = 2;
-    }
-    if(DeterminationWild(x,y,k)==="W"){
-        X1 = 2;
-    }
-    let Y2=1;
-    let Y1=1;
-    if(DeterminationWild(x,y,k) ==="N"){
-        Y2 = 2;
-    }
-    if(DeterminationWild(x,y,k)==="S"){
-        Y1 = 2;
-    }
-    for(let i=x-X1; i<=(x+X2); i++){
+    // if(DeterminationWild(x,y,k) ==="E"){
+    //     X2 = 2;
+    // }
+    // if(DeterminationWild(x,y,k)==="W"){
+    //     X1 = 2;
+    // }
+    // let Y2=1;
+    // let Y1=1;
+    // if(DeterminationWild(x,y,k) ==="N"){
+    //     Y2 = 2;
+    // }
+    // if(DeterminationWild(x,y,k)==="S"){
+    //     Y1 = 2;
+    // }
+    for(let i=x-1; i<=(x+1); i++){
             x1[y][i] = "#"
     }
-    for(let i=y-Y1; i<=(y+Y2); i++){
+    for(let i=y-1; i<=(y+1); i++){
             x1[i][x] = "#"
     }
     x1[GAME_STATE.ship.y][GAME_STATE.ship.x ] = "~";
@@ -812,27 +526,96 @@ function MapWithP(MAP, x, y, k) {
 }
 function angleDetermination(angle, xP, yP, xS, yS, distanceX, distanceY, x, y, k) {
     let PWild;
-    let map= MainMap;
-    for(let i=0; i<Pirates; i++) {
-        if(i!==k) {
-            MainMap = MapWithP(MainMap, GAME_STATE.pirates[i].x, GAME_STATE.pirates[i].y)
-        }
-    }
     if(FLAG) {
         PWild = PiratesWild[k][PiratesR[k]];
     }else{
         PWild = DeterminationWild(xP,yP,k)
     }
-        if((xS+distanceX+x===xP)&&(yS+distanceY+y===yP)){angle[0] = true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, distanceY, x, y, k,PWild )}
+        if((xS+distanceX+x===xP)&&(yS+distanceY+y===yP)&&ThereIsAProblem()){angle[0] = true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX+x, distanceY+y, x, y, k,PWild )}
         if((xS-distanceX===xP)&&(yS+distanceY===yP)){angle[1]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX, distanceY, x, y, k, PWild)}
-        if((xS+distanceX===xP)&&(yS-distanceY-y===yP)){angle[2]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, -distanceY, x, y, k, PWild)}
-        if((xS-distanceX-x===xP)&&(yS-distanceY===yP)){angle[3]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX, -distanceY, x, y, k, PWild)}
-        MainMap = map;
+        if((xS+distanceX===xP)&&(yS-distanceY-y===yP)){angle[2]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, -distanceY-y, x, y, k, PWild)}
+        if((xS-distanceX-x===xP)&&(yS-distanceY===yP)){angle[3]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX-x, -distanceY, x, y, k, PWild)}
 }
-function ThereIsAProblem (){}
+function ThereIsAProblem (xS, yS, pirates){ // провека, входит ли пират в квадрат три на три от корабля.
+    let XPort ;
+    let YPort ;
+    if(!youHome)
+    {
+        XPort = GAME_STATE.ports[0].x;
+        YPort = GAME_STATE.ports[0].y;
+    }else{
+        XPort = GAME_STATE.ports[IDP].x;
+        YPort = GAME_STATE.ports[IDP].y;
+    }
+    for(let i=0; i<Pirates; i++){
+        if(Math.abs(pirates[i].x - xS)<=3 && Math.abs(pirates[i].y - yS)<=3){
+            if(Math.abs(pirates[i].y - yS)+ Math.abs(pirates[i].y - YPort) === Math.abs(YPort - yS)) return true;
+            if(Math.abs(pirates[i].x - xS)+ Math.abs(pirates[i].x - XPort) === Math.abs(XPort - xS)) return true;
+        }
+    }
+    return false;
+}
+function collisionCheck(xS, yS, pirates) {
+    let k=0;
+    let pirateWildTempX;
+    let pirateWildTempY;
+
+    for (let i = 0; i < Pirates; i++) {
+        pirateWildTempX = pirateRouteX[i].concat(pirateRouteX[i]);
+        pirateWildTempY = pirateRouteY[i].concat(pirateRouteY[i]);
+        let len = (PiratesWild[i].length-1)*2; //ДОДЕЛАТЬ  АОТИАРПМАРПМАРМПАРЛПМРПМОРПМАРомп
+        for (let j = PiratesR[i] ; j < len + 1; j++) {
+               if(((Math.abs(pirateRouteX[i][j] - ShipRouteX[k])<=1)&&(pirateRouteY[i][j] - ShipRouteY[k])===0)||(Math.abs(pirateRouteY[i][j] - ShipRouteY[k])<=1&&(pirateRouteX[i][j] - ShipRouteX[k])===0)){
+                   return true;
+               }
+            k++;
+            }
+        k=0;
+    }
+    return false;
+}
+function stopCheck(stop){
+    let stopTemp = stop;
+    let k=0;
+    for (let i = 0; i < Pirates; i++) {
+        let len = PiratesWild[i].length;
+        for (let j = PiratesR[i] ; j < len + 1; j++) {
+            if(((Math.abs(pirateRouteX[i][j] - ShipRouteX[k])<=1)&&(pirateRouteY[i][j] - ShipRouteY[k])===0)||(Math.abs(pirateRouteY[i][j] - ShipRouteY[k])<=1&&(pirateRouteX[i][j] - ShipRouteX[k])===0)){
+                return true;
+            }
+            if(stop===0) {
+                k++;
+            }else{
+                stopTemp--;
+            }
+        }
+        stopTemp=stop;
+        k=0;
+    }
+    return false;
+}
+
+function anotherRoute(xS, yS, pirates) {
+    let WAIT;
+    for(let i=3; i>=3; i--){
+        if(stopСheck(i)!==undefined){
+            if(WAIT===false||WAIT>i){
+                WAIT =i;
+            }
+        }
+    } // проверка на WAIT
+
+}
 function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
     let x = gameState.ship.x;
     let y = gameState.ship.y;
+    if(ThereIsAProblem(x,y, gameState.pirates)&&FLAG)//угроза есть?
+    {
+        if(collisionCheck(x, y, gameState.pirates)){ //столкноание будет?
+            anotherRoute()
+        }
+    }
+
     let angle;
     for (let k = 0; k < Pirates; k++) {
         let angleQSTE = {q: false, s: false, t: false, e: false, FLAG: false, wild:""};
@@ -892,7 +675,7 @@ function pirateRoute(Pirates) {
     }
     if(flag != Pirates.length) {
         for (let i = 0; i<Pirates.length; i++) {
-            if (!(pirateRouteX[i][0] === Pirates[i].x && pirateRouteY[i][0] === Pirates[i].y)) {
+            if (!(pirateRouteX[i][0] === Pirates[i].x && pirateRouteY[i][0] === Pirates[i].y) ) {
                 pirateRouteX[i][pirateRouteX[i].length] = Pirates[i].x;
                 pirateRouteY[i][pirateRouteY[i].length] = Pirates[i].y;
                 PiratesR[i]++;
@@ -924,4 +707,254 @@ function pirateRoute(Pirates) {
         return false
     }
     return true;
+}
+
+function MinWildOfPortNum(map, x1, y1, x2, y2) { //вычисляет коротчайший путь до порта
+    let scripts = [];
+
+    let H = map.length-1;         // ширина рабочего поля  13
+    let W = map[0].length-1;         // высота рабочего поля  18
+    let WALL = -1;         // непроходимая ячейка
+    let BLANK = -2;         // свободная непомеченная ячейка
+
+
+    let px= [], py = [];      // координаты ячеек, входящих  путь
+    let len;                       // длина пути
+    let grid = new Array(H);
+
+    for (let i = 0; i <= H; i++) {
+        grid[i] = new Array (W);
+        for (let j = 0; j <= W; j++) {
+            if (map[i][j].localeCompare("~")===0) {
+                grid[i][j] = -2;
+            }
+            else if(map[i][j].localeCompare("#")===0){
+                grid[i][j] = -1;
+            }else{grid[i][j] = -2;}
+        }
+    }
+    // if(gameState.pirates.length>1) {
+    //     for(let i=0; i<gameState.pirates.length; i++) {
+    //         grid = MapWithP(grid, gameState.pirates[i].x, gameState.pirates[i].y)
+    //     }
+    // }
+    let ax= x1;
+    let ay= y1;
+    let bx =x2;
+    let by =y2;
+
+    let dx = [1, 0, -1, 0 ];   // смещения, соответствующие соседям ячейки
+    let dy = [ 0, 1, 0, -1 ];   // справа, снизу, слева и сверху
+    let  d, x, y, k;
+    let stop;
+    if (grid[ay][ax] === WALL || grid[by][bx] === WALL) {return false; } // ячейка (ax, ay) или (bx, by) - стена
+
+    // распространение волны
+    d = 0;
+    grid[ay][ax] = 0;            // стартовая ячейка помечена 0
+
+
+    do {
+        stop = true;               // предполагаем, что все свободные клетки уже помечены
+        for (y = 0; y < H; ++y)
+            for (x = 0; x < W; ++x)
+                if (grid[y][x] === d)                         // ячейка (beginShipX, beginShipY) помечена числом d
+                {
+                    for (k = 0; k < 4; ++k)                    // проходим по всем непомеченным соседям
+                    {
+                        let iy = y + dy[k], ix = x + dx[k];
+                        if (iy >= 0 && iy < H && ix >= 0 && ix < W &&
+                            grid[iy][ix] === BLANK)
+                        {
+                            stop = false;              // найдены непомеченные клетки
+                            grid[iy][ix] = d + 1;      // распространяем волну
+                        }
+                    }
+                }
+        d++;
+    } while (!stop && grid[by][bx] === BLANK);
+    if (grid[by][bx] === BLANK){return false;}   // путь не найден
+
+    // восстановление пути
+    len = grid[by][bx];            // длина кратчайшего пути из (ax, ay) в (bx, by)
+
+    LEN =len;
+    x = bx;
+    y = by;
+    d = len;
+    while (d > 0)
+    {
+        px[d] = x;
+        py[d] = y;                   // записываем ячейку (beginShipX, beginShipY) в путь
+        d--;
+        for (k = 0; k < 4; ++k)
+        {
+            let iy = y + dy[k], ix = x + dx[k];
+            if (iy >= 0 && iy < H && ix >= 0 && ix < W &&
+                grid[iy][ix] === d)
+            {
+                x = x + dx[k];
+                y = y + dy[k];           // переходим в ячейку, которая на 1 ближе к старту
+                break;
+            }
+        }
+    }
+    ShipRouteX = px.slice();
+    ShipRouteY = py.slice();
+    px[0] = ax;
+    py[0] = ay;                    // теперь px[0..len] и py[0..len] - координаты ячеек пути
+///
+    for(let i=1; i<=len; i++){
+        if(py[i]!==py[i-1]){
+            if(py[i]>py[i-1]){
+                scripts[i-1] = "S"
+            }else{
+                scripts[i-1] = "N"
+            }
+        }else if(px[i]!==px[i-1]){
+            if(px[i]>px[i-1]){
+
+                scripts[i-1] = "E"
+            }else{
+
+                scripts[i-1] = "W"
+            }
+        }
+    }
+    /// заменить на функцию.
+    return scripts;
+}
+
+function whereWeAreGoing(xS,yS,distanceX, distanceY, x, y, k, PiratsWild) {
+    let XPort ;
+    let YPort ;
+    // let map= MainMap;
+    // for(let i=0; i<Pirates; i++) {
+    //     // if(i!==k) {
+    //     MainMap = MapWithP(MainMap, GAME_STATE.pirates[i].x, GAME_STATE.pirates[i].y, i)
+    //     // }
+    // }
+    // // console.log(MainMap)
+    // if(youHome) {
+    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[IDP].x, GAME_STATE.ports[IDP].y)
+    // }else{
+    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[0].x, GAME_STATE.ports[0].y)
+    // }
+    // // console.log("x = " + GAME_STATE.ship.x + " y = " +  GAME_STATE.ship.y)
+    // console.log(MainMap)
+    // MainMap = map;
+    // return wild[0];
+
+    if(!youHome)
+    {
+        XPort = GAME_STATE.ports[0].x;
+        YPort = GAME_STATE.ports[0].y;
+    }else{
+        XPort = GAME_STATE.ports[IDP].x;
+        YPort = GAME_STATE.ports[IDP].y;
+    }
+
+    //
+    if((distanceX===-1 && distanceY===0)&&(wild[0]==="S")){ // E0
+
+    }
+    if((distanceX===1 && distanceY===0)&&(wild[0]==="N")){//W0
+
+    }
+    if((distanceX===0 && distanceY===1)&&(wild[0]==="S")){ // N0
+        return "N"
+    }
+    if((distanceX===0 && distanceY===-1)&&(wild[0]==="N")){//S0
+        return "S"
+    }
+    //
+    if(((distanceX===0&&(distanceY===-2||distanceY===2)) || (distanceY===0&&(distanceX===-2||distanceX===2)) )) { // N, S, W, E
+        if(FLAG===false){
+            //добавить на картку приратов и принять решение.
+            return "WAIT";
+        }
+        if (XPort === xS && (wild[0]==="N"||wild[0]==="S")) {
+            return "WAIT";
+        }
+        if (YPort === yS && (wild[0]==="E"||wild[0]==="W")) {
+            return "WAIT";
+        }
+        if (XPort !== xS) {
+            let map = MainMap;
+            let len = PiratesWild[k].length / 2;
+            let xP;
+            let yP;
+            if (PiratesR[k] > PiratesWild[k].length / 2) {
+                len = PiratesWild[k].length
+            }
+            for (let i = 0; i < Pirates; i++) {
+                for (let j = PiratesR[k] ; j < len + 1; j++) {
+                    MainMap = MapWithP(MainMap, pirateRouteX[i][j], pirateRouteY[i][j], k)
+                    if(i===k) {
+                        xP = pirateRouteX[k][j];
+                        yP = pirateRouteY[k][j];
+                    }
+                }
+            }
+            let wild = MinWildOfPortNum(map, xS, yS, XPort, YPort);
+            let wild1 = MinWildOfPortNum(MainMap, xS, yS, XPort, YPort);
+            if (wild1.length <= wild.length) {
+                MainMap = map;
+                return wild1[0];
+            } else {
+                MainMap = map;
+                return "WAIT"
+            }
+        }
+    }
+    // if((distanceX===2&&distanceY===0)&&(wild[0]==="E")){//W
+    //
+    // }
+    // if((distanceX===-2&&distanceY===0)&&(wild[0]==="W")){ //E
+    //
+    // }
+    //
+    if(distanceX===1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="E")){ //q
+        console.log("q")
+        if( PiratsWild==="W"&&wild[0]==="E"){
+            return "WAIT"
+        }
+        if( PiratsWild==="N"&&wild[0]==="S"){
+            return "WAIT"
+        }
+    }
+    if(distanceX===-1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="W")){//s
+        // console.log("s")
+        // if((PiratsWild==="N"||PiratsWild==="E")&&(wild[0]==="W"||wild[0]==="S")){
+        //     return "WAIT"
+        // }
+        // if( PiratsWild==="N"){
+        //     return "WAIT"
+        // }
+        // let map = MainMap;
+        // MainMap = MapWithP(MainMap, pirateRouteX[k][PiratesR[k]], pirateRouteY[k][PiratesR[k]], k)
+        // let wild = MinWildOfPortNum(MainMap, xS, yS, XPort, YPort);
+        // MainMap =map;
+        // return wild[0];
+    }
+
+    if(distanceX===1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="E")){//t
+        console.log("t")
+        if( PiratsWild==="W"){
+            return "WAIT"
+        }
+        if( PiratsWild==="S"){
+            return "WAIT"
+        }
+    }
+    if(distanceX===-1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="W")) {//c
+        console.log("c")
+        if (PiratsWild === "E") {
+            return "WAIT"
+        }
+        if (PiratsWild === "S") {
+            return "WAIT"
+        }
+    }
+    //
 }
