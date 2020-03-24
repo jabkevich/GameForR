@@ -83,11 +83,10 @@ export function getNextCommand(gameState) {
         }
     }
 
-    if (i<-17) {
+    if (i<-18) {
         i++;
         return "WAIT";
     }
-
     if((G>=scriptsForGoods)&&(gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)){
         G=0;
         flagBuy=false;
@@ -96,19 +95,19 @@ export function getNextCommand(gameState) {
         flagBuy=true;
         scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
      }
-    IDP = 3;
+    // IDP = 3;
     if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
         G++;
         youHome =true;
         MovesCount--;
-        return "LOAD fish 1"
+        // return "LOAD fish 1"
         return scripts[G-1];
     }
     if((gameState.ship.x === gameState.ports[IDP].x) && (gameState.ship.y ===gameState.ports[IDP].y)&&(G>=scriptsForGoods/2)&&(G<scriptsForGoods)){
         G++;
         youHome = false;
         MovesCount--;
-        return "SELL fish 1"
+        // return "SELL fish 1"
         return scripts[G-1];
     }
     if(youHome) {
@@ -143,14 +142,7 @@ function MaxPOfPort(Ports, goods, PortsXY) {
     let M;
     let max_x = goods.length;//количество товаров
     let max_ogran1 = goods.length+1; //количество тоаров +1
-    // let inp_val1 = [[3, 1, 3, 10, 50, 10,368],
-    //     [1, 0, 0, 0,  0,  0, 3000],
-    //     [0, 1, 0, 0,  0,  0, 3000],
-    //     [0, 0, 1, 0,  0,  0, 5],
-    //     [0, 0, 0, 1,  0,  0, 10],
-    //     [0, 0, 0, 0,  1,  0, 15],
-    //     [0, 0, 0, 0,  0,  1, 3000]
-    // ];
+
     let inp_val1=[];
     let Fun = [];
 
@@ -501,26 +493,18 @@ function MapWithP(MAP, x, y, k) {
             x1[i][j] = MAP[i][j]
         }
     }
-    let X2=1;
-    let X1=1;
-    // if(DeterminationWild(x,y,k) ==="E"){
-    //     X2 = 2;
-    // }
-    // if(DeterminationWild(x,y,k)==="W"){
-    //     X1 = 2;
-    // }
-    // let Y2=1;
-    // let Y1=1;
-    // if(DeterminationWild(x,y,k) ==="N"){
-    //     Y2 = 2;
-    // }
-    // if(DeterminationWild(x,y,k)==="S"){
-    //     Y1 = 2;
-    // }
-    for(let i=x-1; i<=(x+1); i++){
+    let X1 = 1;
+    let X2 = 1;
+    let Y1 =1 ;
+    let Y2 = 1;
+    if(PiratesWild[k][PiratesR[k]]==="E") X2 = 2;
+    if(PiratesWild[k][PiratesR[k]]==="W") X1 = 2;
+    if(PiratesWild[k][PiratesR[k]]==="S") Y2 = 2;
+    if(PiratesWild[k][PiratesR[k]]==="N") Y1 = 2;
+    for(let i=x-X1; i<=(x+X2); i++){
             x1[y][i] = "#"
     }
-    for(let i=y-1; i<=(y+1); i++){
+    for(let i=y-Y1; i<=(y+Y2); i++){
             x1[i][x] = "#"
     }
     x1[GAME_STATE.ship.y][GAME_STATE.ship.x ] = "~";
@@ -539,8 +523,8 @@ function abcCheck(ShipO, PirateO, PortO) { //Ship, Pirate и Port - должны
     return false;
 }
 function collisionCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY, stop) {
-    let TempRoutPirateX = pirateRouteX.slice(0, pirateRouteX.length - 2).concat(pirateRouteX);
-    let TempRoutPirateY = pirateRouteY.slice(0, pirateRouteX.length - 2).concat(pirateRouteY);
+    let TempRoutPirateX = pirateRouteX.slice(0, pirateRouteX.length - 1).concat(pirateRouteX);
+    let TempRoutPirateY = pirateRouteY.slice(0, pirateRouteX.length - 1).concat(pirateRouteY);
     let TempRoutShipX = ShipRouteX; TempRoutShipX[0] = xS;
     let TempRoutShipY = ShipRouteY; TempRoutShipY[0] = yS;
     let k=0;
@@ -552,8 +536,8 @@ function collisionCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX,
         PirateR +=stop;
     }
     for(let i=0; i<wild.length; i++){
-        if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 1, 0)) return true;
-        if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 0, 1)) return true;
+        if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 1, 0)) return [TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR]];
+        if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 0, 1)) return [TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR]];
         k++;
     }
     return false;
@@ -562,79 +546,99 @@ function stopCheck(xS, yS,stop, pirateRouteX, pirateRouteY, PirateR,ShipRouteX, 
     return(collisionCheck( xS, yS,pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY, stop))
 }
 function countCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY){
-    for(let i =0; i<wild.length; i++){
-        if(!(stopCheck(xS, yS,i,pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY))){
-            return i;
+    let arrboll = [];
+    for(let j=0; j<Pirates; j++) {
+        arrboll[j] = [];
+        for (let i = 0; i < wild.length; i++) {
+            arrboll[j][i] = -1;
+            if (!(stopCheck(xS, yS, i, pirateRouteX[j], pirateRouteY[j], (PirateR[j] - 1), ShipRouteX, ShipRouteY))) {
+                if(Pirates<2){return i}
+                arrboll[j][i] = i;
+            }
         }
     }
-    console.log("-1")
+    console.log(arrboll);
+    let WAIT = [];
+    for(let i=0; i<Pirates-1; i++){
+        for(let j=0; j<arrboll[i].length; j++){
+            if(arrboll[i][j]>=0 &&arrboll[i+1][j]>=0){
+                WAIT[j] = arrboll[i][j];
+            }else{
+                WAIT[j] =undefined;
+            }
+        }
+    }
+    for(let i=0; i<WAIT.length; i++){
+        if(WAIT[i]>=0) return WAIT[i];
+    }
+    console.log("-1");
     return -1;
 }
 
-function anotherRoute(xS, yS, pirates) {
-
+function anotherRoute(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY) {
+    let map = MainMap;
+    let Pr;
+    for(let i=0; i<Pirates; i++){
+         Pr = collisionCheck(xS, yS, pirateRouteX[i], pirateRouteY[i], PiratesR[i] - 1, ShipRouteX, ShipRouteY);
+        if(Pr){
+           map = MapWithP(map, Pr[0], Pr[1], i)
+        }
+    }
+    console.log(map)
+    return MinWildOfPortNum(map, xS, yS, ShipRouteX[ShipRouteX.length-1],ShipRouteY[ShipRouteY.length-1])
 }
 function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
     // console.log("x = "  + gameState.ship.x + "; y = " + gameState.ship.y);
     // console.log("xP = "  + gameState.pirates[0].x + "; yP = " + gameState.pirates[0].y);
+    let WAIT;
     let problem = false;
     for(let i=0; i<Pirates; i++) {
         problem = (ThereIsAProblem(gameState.ship.x, gameState.ship.y, gameState.pirates[i].x, gameState.pirates[i].y,3, 3));
-        if(problem) {problem = i;}
-        let idp;
-        if(youHome) {
-            idp = IDP
-        }else{
-            idp = 0;
+        if(problem) {problem = i; break;}
+    }
+    let idp = 0;
+    if(youHome) {
+        idp = IDP
+    }
+    if(problem!==false){
+        problem = false;
+        for(let i =0; i<Pirates; i++) {
+            problem = false;
+            if (abcCheck(gameState.ship.x, gameState.pirates[i].x, gameState.ports[idp].x) || abcCheck(gameState.ship.y, gameState.pirates[i].y, gameState.ports[idp].y)) {
+                console.log("abcCheck");
+                problem = true;
+                break;
+            }
         }
-        if(gameState.ship.x === 13&& gameState.ship.y===8){
-            console.log()
-        }
-        if(problem!==false){
-            console.log(problem)
-            if(abcCheck(gameState.ship.x, gameState.pirates[problem].x, gameState.ports[idp].x)||abcCheck(gameState.ship.y, gameState.pirates[problem].y, gameState.ports[idp].y)){
-                console.log("abcCheck")
-                if(collisionCheck(gameState.ship.x, gameState.ship.y, pirateRouteX[problem],pirateRouteY[problem], PiratesR[problem]-1, ShipRouteX, ShipRouteY)){
+        if(problem) {
+            problem = false;
+            for(let i=0; i<Pirates; i++) {
+                if (collisionCheck(gameState.ship.x, gameState.ship.y, pirateRouteX[i], pirateRouteY[i], PiratesR[i] - 1, ShipRouteX, ShipRouteY)) {
                     console.log("collisionCheck");
-                    if(countCheck(gameState.ship.x, gameState.ship.y, pirateRouteX[problem],pirateRouteY[problem], PiratesR[problem]-1, ShipRouteX, ShipRouteY) > 0) {console.log("WAIT"); return "WAIT"}
+                    problem = true;
+                    break;
                 }
             }
         }
+        if(problem) {
+               WAIT = countCheck(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY)
+        }
+    }
+    console.log(WAIT);
+    if(WAIT!==-1 && WAIT!== undefined) {
+        let OldWAIT = wild.length + WAIT;
+        let NewWAIT = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
+        if(OldWAIT> NewWAIT.length){
+            return NewWAIT[0]
+        }else{
+                return "WAIT"
+            }
+    }else{
+        let NewWAIT = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
+        console.log(NewWAIT);
+        return NewWAIT[0]
     }
 
-    // let angle;
-    // for (let k = 0; k < Pirates; k++) {
-    //     let angleQSTE = {q: false, s: false, t: false, e: false, FLAG: false, wild:""};
-    //     let angleABCD = {A: false, B: false, C: false, D: false, FLAG: false, wild:""};
-    //     let angleZXCV = {z: false, x: false, c: false, v: false , FLAG: false, wild:""};
-    //     let angleUIOP = {u: false, i: false, o: false, p: false, FLAG: false, wild:""};
-    //     let angleNN0SS0 = {N: false, N0: false, S: false, S0: false, FLAG: false, wild:""};
-    //     let angleWW0EE0 = {W: false, W0: false, E: false, E0: false, FLAG: false, wild:""};
-    //     angleDetermination(angleQSTE, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 1, 0, 0, k);
-    //     angleDetermination(angleABCD, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 2, 0, 0,k);
-    //     angleDetermination(angleZXCV, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 2, 0, 0, k);
-    //     angleDetermination(angleUIOP, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 1, 0, 0, k);
-    //     angleDetermination(angleNN0SS0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 0, 1, 0, 1, k);
-    //     angleDetermination(angleWW0EE0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 0, 1, 0, k);
-    //
-    //     if(angleQSTE[4]==true){
-    //         angle =angleQSTE[5];
-    //     }else if (angleABCD[4]==true){
-    //         angle =angleABCD[5];
-    //     }else if (angleZXCV[4]==true){
-    //         angle =angleZXCV[5];
-    //     }else if (angleUIOP[4]==true){
-    //         angle =angleUIOP[5];
-    //     }else if (angleNN0SS0[4]==true){
-    //         angle =angleNN0SS0[5];
-    //     }else if (angleWW0EE0[4]==true){
-    //         angle =angleWW0EE0[5];
-    //     }
-    //     if(angle!==undefined){
-    //         return angle
-    //     }
-    // }
-    // return angle
 }
 function Mov(mov) {
     MovesCount--;
@@ -719,11 +723,6 @@ function MinWildOfPortNum(map, x1, y1, x2, y2) { //вычисляет корот
             }else{grid[i][j] = -2;}
         }
     }
-    // if(gameState.pirates.length>1) {
-    //     for(let i=0; i<gameState.pirates.length; i++) {
-    //         grid = MapWithP(grid, gameState.pirates[i].x, gameState.pirates[i].y)
-    //     }
-    // }
     let ax= x1;
     let ay= y1;
     let bx =x2;
@@ -809,149 +808,4 @@ function MinWildOfPortNum(map, x1, y1, x2, y2) { //вычисляет корот
     }
     /// заменить на функцию.
     return scripts;
-}
-function angleDetermination(angle, xP, yP, xS, yS, distanceX, distanceY, x, y, k) {
-    let PWild;
-    if(FLAG) {
-        PWild = PiratesWild[k][PiratesR[k]];
-    }else{
-        PWild = DeterminationWild(xP,yP,k)
-    }
-    if((xS+distanceX+x===xP)&&(yS+distanceY+y===yP)){angle[0] = true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX+x, distanceY+y, x, y, k,PWild )}
-    if((xS-distanceX===xP)&&(yS+distanceY===yP)){angle[1]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX, distanceY, x, y, k, PWild)}
-    if((xS+distanceX===xP)&&(yS-distanceY-y===yP)){angle[2]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, -distanceY-y, x, y, k, PWild)}
-    if((xS-distanceX-x===xP)&&(yS-distanceY===yP)){angle[3]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX-x, -distanceY, x, y, k, PWild)}
-}
-function whereWeAreGoing(xS,yS,distanceX, distanceY, x, y, k, PiratsWild) {
-    let XPort ;
-    let YPort ;
-    // let map= MainMap;
-    // for(let i=0; i<Pirates; i++) {
-    //     // if(i!==k) {
-    //     MainMap = MapWithP(MainMap, GAME_STATE.pirates[i].x, GAME_STATE.pirates[i].y, i)
-    //     // }
-    // }
-    // // console.log(MainMap)
-    // if(youHome) {
-    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[IDP].x, GAME_STATE.ports[IDP].y)
-    // }else{
-    //     wild = MinWildOfPortNum(MainMap, GAME_STATE.ship.x, GAME_STATE.ship.y, GAME_STATE.ports[0].x, GAME_STATE.ports[0].y)
-    // }
-    // // console.log("x = " + GAME_STATE.ship.x + " y = " +  GAME_STATE.ship.y)
-    // console.log(MainMap)
-    // MainMap = map;
-    // return wild[0];
-
-    if(!youHome)
-    {
-        XPort = GAME_STATE.ports[0].x;
-        YPort = GAME_STATE.ports[0].y;
-    }else{
-        XPort = GAME_STATE.ports[IDP].x;
-        YPort = GAME_STATE.ports[IDP].y;
-    }
-
-    //
-    if((distanceX===-1 && distanceY===0)&&(wild[0]==="S")){ // E0
-
-    }
-    if((distanceX===1 && distanceY===0)&&(wild[0]==="N")){//W0
-
-    }
-    if((distanceX===0 && distanceY===1)&&(wild[0]==="S")){ // N0
-        return "N"
-    }
-    if((distanceX===0 && distanceY===-1)&&(wild[0]==="N")){//S0
-        return "S"
-    }
-    //
-    if(((distanceX===0&&(distanceY===-2||distanceY===2)) || (distanceY===0&&(distanceX===-2||distanceX===2)) )) { // N, S, W, E
-        if(FLAG===false){
-            //добавить на картку приратов и принять решение.
-            return "WAIT";
-        }
-        if (XPort === xS && (wild[0]==="N"||wild[0]==="S")) {
-            return "WAIT";
-        }
-        if (YPort === yS && (wild[0]==="E"||wild[0]==="W")) {
-            return "WAIT";
-        }
-        if (XPort !== xS) {
-            let map = MainMap;
-            let len = PiratesWild[k].length / 2;
-            let xP;
-            let yP;
-            if (PiratesR[k] > PiratesWild[k].length / 2) {
-                len = PiratesWild[k].length
-            }
-            for (let i = 0; i < Pirates; i++) {
-                for (let j = PiratesR[k] ; j < len + 1; j++) {
-                    MainMap = MapWithP(MainMap, pirateRouteX[i][j], pirateRouteY[i][j], k)
-                    if(i===k) {
-                        xP = pirateRouteX[k][j];
-                        yP = pirateRouteY[k][j];
-                    }
-                }
-            }
-            let wild = MinWildOfPortNum(map, xS, yS, XPort, YPort);
-            let wild1 = MinWildOfPortNum(MainMap, xS, yS, XPort, YPort);
-            if (wild1.length <= wild.length) {
-                MainMap = map;
-                return wild1[0];
-            } else {
-                MainMap = map;
-                return "WAIT"
-            }
-        }
-    }
-    // if((distanceX===2&&distanceY===0)&&(wild[0]==="E")){//W
-    //
-    // }
-    // if((distanceX===-2&&distanceY===0)&&(wild[0]==="W")){ //E
-    //
-    // }
-    //
-    if(distanceX===1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="E")){ //q
-        console.log("q")
-        if( PiratsWild==="W"&&wild[0]==="E"){
-            return "WAIT"
-        }
-        if( PiratsWild==="N"&&wild[0]==="S"){
-            return "WAIT"
-        }
-    }
-    if(distanceX===-1 && distanceY===1 &&(wild[0]==="S"||wild[0]==="W")){//s
-        // console.log("s")
-        // if((PiratsWild==="N"||PiratsWild==="E")&&(wild[0]==="W"||wild[0]==="S")){
-        //     return "WAIT"
-        // }
-        // if( PiratsWild==="N"){
-        //     return "WAIT"
-        // }
-        // let map = MainMap;
-        // MainMap = MapWithP(MainMap, pirateRouteX[k][PiratesR[k]], pirateRouteY[k][PiratesR[k]], k)
-        // let wild = MinWildOfPortNum(MainMap, xS, yS, XPort, YPort);
-        // MainMap =map;
-        // return wild[0];
-    }
-
-    if(distanceX===1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="E")){//t
-        console.log("t")
-        if( PiratsWild==="W"){
-            return "WAIT"
-        }
-        if( PiratsWild==="S"){
-            return "WAIT"
-        }
-    }
-    if(distanceX===-1 && distanceY===-1 &&(wild[0]==="N"||wild[0]==="W")) {//c
-        console.log("c")
-        if (PiratsWild === "E") {
-            return "WAIT"
-        }
-        if (PiratsWild === "S") {
-            return "WAIT"
-        }
-    }
-    //
 }
