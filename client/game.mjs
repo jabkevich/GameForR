@@ -83,7 +83,10 @@ export function getNextCommand(gameState) {
         }
     }
 
-
+    if (i<-17) {
+        i++;
+        return "WAIT";
+    }
 
     if((G>=scriptsForGoods)&&(gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)){
         G=0;
@@ -93,19 +96,19 @@ export function getNextCommand(gameState) {
         flagBuy=true;
         scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
      }
-    // IDP = 5;
+    IDP = 3;
     if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
         G++;
         youHome =true;
         MovesCount--;
-        // return "LOAD fish 1"
+        return "LOAD fish 1"
         return scripts[G-1];
     }
     if((gameState.ship.x === gameState.ports[IDP].x) && (gameState.ship.y ===gameState.ports[IDP].y)&&(G>=scriptsForGoods/2)&&(G<scriptsForGoods)){
         G++;
         youHome = false;
         MovesCount--;
-        // return "SELL fish 1"
+        return "SELL fish 1"
         return scripts[G-1];
     }
     if(youHome) {
@@ -116,7 +119,6 @@ export function getNextCommand(gameState) {
         // }
     }else{
         wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y);
-        console.log(wild[0])
     }
         let Pirates = famousPiratesWild(gameState, wild);
         if (Pirates) {
@@ -524,131 +526,115 @@ function MapWithP(MAP, x, y, k) {
     x1[GAME_STATE.ship.y][GAME_STATE.ship.x ] = "~";
     return x1;
 }
-function angleDetermination(angle, xP, yP, xS, yS, distanceX, distanceY, x, y, k) {
-    let PWild;
-    if(FLAG) {
-        PWild = PiratesWild[k][PiratesR[k]];
-    }else{
-        PWild = DeterminationWild(xP,yP,k)
-    }
-        if((xS+distanceX+x===xP)&&(yS+distanceY+y===yP)&&ThereIsAProblem()){angle[0] = true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX+x, distanceY+y, x, y, k,PWild )}
-        if((xS-distanceX===xP)&&(yS+distanceY===yP)){angle[1]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX, distanceY, x, y, k, PWild)}
-        if((xS+distanceX===xP)&&(yS-distanceY-y===yP)){angle[2]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, -distanceY-y, x, y, k, PWild)}
-        if((xS-distanceX-x===xP)&&(yS-distanceY===yP)){angle[3]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX-x, -distanceY, x, y, k, PWild)}
-}
-function ThereIsAProblem (xS, yS, pirates){ // провека, входит ли пират в квадрат три на три от корабля.
-    let XPort ;
-    let YPort ;
-    if(!youHome)
-    {
-        XPort = GAME_STATE.ports[0].x;
-        YPort = GAME_STATE.ports[0].y;
-    }else{
-        XPort = GAME_STATE.ports[IDP].x;
-        YPort = GAME_STATE.ports[IDP].y;
-    }
-    for(let i=0; i<Pirates; i++){
-        if(Math.abs(pirates[i].x - xS)<=3 && Math.abs(pirates[i].y - yS)<=3){
-            if(Math.abs(pirates[i].y - yS)+ Math.abs(pirates[i].y - YPort) === Math.abs(YPort - yS)) return true;
-            if(Math.abs(pirates[i].x - xS)+ Math.abs(pirates[i].x - XPort) === Math.abs(XPort - xS)) return true;
-        }
-    }
-    return false;
-}
-function collisionCheck(xS, yS, pirates) {
-    let k=0;
-    let pirateWildTempX;
-    let pirateWildTempY;
 
-    for (let i = 0; i < Pirates; i++) {
-        pirateWildTempX = pirateRouteX[i].concat(pirateRouteX[i]);
-        pirateWildTempY = pirateRouteY[i].concat(pirateRouteY[i]);
-        let len = (PiratesWild[i].length-1)*2; //ДОДЕЛАТЬ  АОТИАРПМАРПМАРМПАРЛПМРПМОРПМАРомп
-        for (let j = PiratesR[i] ; j < len + 1; j++) {
-               if(((Math.abs(pirateRouteX[i][j] - ShipRouteX[k])<=1)&&(pirateRouteY[i][j] - ShipRouteY[k])===0)||(Math.abs(pirateRouteY[i][j] - ShipRouteY[k])<=1&&(pirateRouteX[i][j] - ShipRouteX[k])===0)){
-                   return true;
-               }
-            k++;
-            }
-        k=0;
+/**
+ * @return {boolean}
+ */
+function ThereIsAProblem (xS, yS, xP, yP, x,y){ // провека, входит ли пират в зону n клеток
+    if((Math.abs(yP-yS) <=y && Math.abs(xP-xS) <=x)) return true;
+    else return false;
+}
+function abcCheck(ShipO, PirateO, PortO) { //Ship, Pirate и Port - должны находиться на одной оси
+    if(Math.abs(PortO - ShipO)===Math.abs(PirateO-ShipO)+Math.abs(PortO-PirateO)) return true;
+    return false;
+}
+function collisionCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY, stop) {
+    let TempRoutPirateX = pirateRouteX.slice(0, pirateRouteX.length - 2).concat(pirateRouteX);
+    let TempRoutPirateY = pirateRouteY.slice(0, pirateRouteX.length - 2).concat(pirateRouteY);
+    let TempRoutShipX = ShipRouteX; TempRoutShipX[0] = xS;
+    let TempRoutShipY = ShipRouteY; TempRoutShipY[0] = yS;
+    let k=0;
+    if(stop!==undefined) {
+        for (let i = 0; i <= stop; i++) {
+            if (ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i + PirateR], TempRoutPirateY[i + PirateR], 1, 0)) return true;
+            if (ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i + PirateR], TempRoutPirateY[i + PirateR], 0, 1)) return true;
+        }
+        PirateR +=stop;
+    }
+    for(let i=0; i<wild.length; i++){
+        if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 1, 0)) return true;
+        if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 0, 1)) return true;
+        k++;
     }
     return false;
 }
-function stopCheck(stop){
-    let stopTemp = stop;
-    let k=0;
-    for (let i = 0; i < Pirates; i++) {
-        let len = PiratesWild[i].length;
-        for (let j = PiratesR[i] ; j < len + 1; j++) {
-            if(((Math.abs(pirateRouteX[i][j] - ShipRouteX[k])<=1)&&(pirateRouteY[i][j] - ShipRouteY[k])===0)||(Math.abs(pirateRouteY[i][j] - ShipRouteY[k])<=1&&(pirateRouteX[i][j] - ShipRouteX[k])===0)){
-                return true;
-            }
-            if(stop===0) {
-                k++;
-            }else{
-                stopTemp--;
-            }
+function stopCheck(xS, yS,stop, pirateRouteX, pirateRouteY, PirateR,ShipRouteX, ShipRouteY){
+    return(collisionCheck( xS, yS,pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY, stop))
+}
+function countCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY){
+    for(let i =0; i<wild.length; i++){
+        if(!(stopCheck(xS, yS,i,pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY))){
+            return i;
         }
-        stopTemp=stop;
-        k=0;
     }
-    return false;
+    console.log("-1")
+    return -1;
 }
 
 function anotherRoute(xS, yS, pirates) {
-    let WAIT;
-    for(let i=3; i>=3; i--){
-        if(stopСheck(i)!==undefined){
-            if(WAIT===false||WAIT>i){
-                WAIT =i;
-            }
-        }
-    } // проверка на WAIT
 
 }
 function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
-    let x = gameState.ship.x;
-    let y = gameState.ship.y;
-    if(ThereIsAProblem(x,y, gameState.pirates)&&FLAG)//угроза есть?
-    {
-        if(collisionCheck(x, y, gameState.pirates)){ //столкноание будет?
-            anotherRoute()
+    // console.log("x = "  + gameState.ship.x + "; y = " + gameState.ship.y);
+    // console.log("xP = "  + gameState.pirates[0].x + "; yP = " + gameState.pirates[0].y);
+    let problem = false;
+    for(let i=0; i<Pirates; i++) {
+        problem = (ThereIsAProblem(gameState.ship.x, gameState.ship.y, gameState.pirates[i].x, gameState.pirates[i].y,3, 3));
+        if(problem) {problem = i;}
+        let idp;
+        if(youHome) {
+            idp = IDP
+        }else{
+            idp = 0;
+        }
+        if(gameState.ship.x === 13&& gameState.ship.y===8){
+            console.log()
+        }
+        if(problem!==false){
+            console.log(problem)
+            if(abcCheck(gameState.ship.x, gameState.pirates[problem].x, gameState.ports[idp].x)||abcCheck(gameState.ship.y, gameState.pirates[problem].y, gameState.ports[idp].y)){
+                console.log("abcCheck")
+                if(collisionCheck(gameState.ship.x, gameState.ship.y, pirateRouteX[problem],pirateRouteY[problem], PiratesR[problem]-1, ShipRouteX, ShipRouteY)){
+                    console.log("collisionCheck");
+                    if(countCheck(gameState.ship.x, gameState.ship.y, pirateRouteX[problem],pirateRouteY[problem], PiratesR[problem]-1, ShipRouteX, ShipRouteY) > 0) {console.log("WAIT"); return "WAIT"}
+                }
+            }
         }
     }
 
-    let angle;
-    for (let k = 0; k < Pirates; k++) {
-        let angleQSTE = {q: false, s: false, t: false, e: false, FLAG: false, wild:""};
-        let angleABCD = {A: false, B: false, C: false, D: false, FLAG: false, wild:""};
-        let angleZXCV = {z: false, x: false, c: false, v: false , FLAG: false, wild:""};
-        let angleUIOP = {u: false, i: false, o: false, p: false, FLAG: false, wild:""};
-        let angleNN0SS0 = {N: false, N0: false, S: false, S0: false, FLAG: false, wild:""};
-        let angleWW0EE0 = {W: false, W0: false, E: false, E0: false, FLAG: false, wild:""};
-        angleDetermination(angleQSTE, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 1, 0, 0, k);
-        angleDetermination(angleABCD, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 2, 0, 0,k);
-        angleDetermination(angleZXCV, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 2, 0, 0, k);
-        angleDetermination(angleUIOP, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 1, 0, 0, k);
-        angleDetermination(angleNN0SS0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 0, 1, 0, 1, k);
-        angleDetermination(angleWW0EE0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 0, 1, 0, k);
-
-        if(angleQSTE[4]==true){
-            angle =angleQSTE[5];
-        }else if (angleABCD[4]==true){
-            angle =angleABCD[5];
-        }else if (angleZXCV[4]==true){
-            angle =angleZXCV[5];
-        }else if (angleUIOP[4]==true){
-            angle =angleUIOP[5];
-        }else if (angleNN0SS0[4]==true){
-            angle =angleNN0SS0[5];
-        }else if (angleWW0EE0[4]==true){
-            angle =angleWW0EE0[5];
-        }
-        if(angle!==undefined){
-            return angle
-        }
-    }
-    return angle
+    // let angle;
+    // for (let k = 0; k < Pirates; k++) {
+    //     let angleQSTE = {q: false, s: false, t: false, e: false, FLAG: false, wild:""};
+    //     let angleABCD = {A: false, B: false, C: false, D: false, FLAG: false, wild:""};
+    //     let angleZXCV = {z: false, x: false, c: false, v: false , FLAG: false, wild:""};
+    //     let angleUIOP = {u: false, i: false, o: false, p: false, FLAG: false, wild:""};
+    //     let angleNN0SS0 = {N: false, N0: false, S: false, S0: false, FLAG: false, wild:""};
+    //     let angleWW0EE0 = {W: false, W0: false, E: false, E0: false, FLAG: false, wild:""};
+    //     angleDetermination(angleQSTE, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 1, 0, 0, k);
+    //     angleDetermination(angleABCD, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 2, 0, 0,k);
+    //     angleDetermination(angleZXCV, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 2, 0, 0, k);
+    //     angleDetermination(angleUIOP, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 2, 1, 0, 0, k);
+    //     angleDetermination(angleNN0SS0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 0, 1, 0, 1, k);
+    //     angleDetermination(angleWW0EE0, gameState.pirates[k].x, gameState.pirates[k].y, x, y, 1, 0, 1, 0, k);
+    //
+    //     if(angleQSTE[4]==true){
+    //         angle =angleQSTE[5];
+    //     }else if (angleABCD[4]==true){
+    //         angle =angleABCD[5];
+    //     }else if (angleZXCV[4]==true){
+    //         angle =angleZXCV[5];
+    //     }else if (angleUIOP[4]==true){
+    //         angle =angleUIOP[5];
+    //     }else if (angleNN0SS0[4]==true){
+    //         angle =angleNN0SS0[5];
+    //     }else if (angleWW0EE0[4]==true){
+    //         angle =angleWW0EE0[5];
+    //     }
+    //     if(angle!==undefined){
+    //         return angle
+    //     }
+    // }
+    // return angle
 }
 function Mov(mov) {
     MovesCount--;
@@ -824,7 +810,18 @@ function MinWildOfPortNum(map, x1, y1, x2, y2) { //вычисляет корот
     /// заменить на функцию.
     return scripts;
 }
-
+function angleDetermination(angle, xP, yP, xS, yS, distanceX, distanceY, x, y, k) {
+    let PWild;
+    if(FLAG) {
+        PWild = PiratesWild[k][PiratesR[k]];
+    }else{
+        PWild = DeterminationWild(xP,yP,k)
+    }
+    if((xS+distanceX+x===xP)&&(yS+distanceY+y===yP)){angle[0] = true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX+x, distanceY+y, x, y, k,PWild )}
+    if((xS-distanceX===xP)&&(yS+distanceY===yP)){angle[1]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX, distanceY, x, y, k, PWild)}
+    if((xS+distanceX===xP)&&(yS-distanceY-y===yP)){angle[2]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,distanceX, -distanceY-y, x, y, k, PWild)}
+    if((xS-distanceX-x===xP)&&(yS-distanceY===yP)){angle[3]= true; angle[4]=true; angle[5] = whereWeAreGoing(xS,yS,-distanceX-x, -distanceY, x, y, k, PWild)}
+}
 function whereWeAreGoing(xS,yS,distanceX, distanceY, x, y, k, PiratsWild) {
     let XPort ;
     let YPort ;
