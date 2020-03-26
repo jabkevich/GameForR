@@ -95,19 +95,19 @@ export function getNextCommand(gameState) {
         flagBuy=true;
         scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
      }
-    // IDP = 3;
+    IDP = 3;
     if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
         G++;
         youHome =true;
         MovesCount--;
-        // return "LOAD fish 1"
+        return "LOAD fish 1"
         return scripts[G-1];
     }
     if((gameState.ship.x === gameState.ports[IDP].x) && (gameState.ship.y ===gameState.ports[IDP].y)&&(G>=scriptsForGoods/2)&&(G<scriptsForGoods)){
         G++;
         youHome = false;
         MovesCount--;
-        // return "SELL fish 1"
+        return "SELL fish 1"
         return scripts[G-1];
     }
     if(youHome) {
@@ -625,7 +625,10 @@ function famousPiratesWild(gameState, PiratesWild) { //знаем путь пи�
         }
     }
     console.log(WAIT);
-    if(WAIT!==-1 && WAIT!== undefined) {
+    if(WAIT===undefined){
+        return wild[0]
+    }
+    if(WAIT!==-1) {
         let OldWAIT = wild.length + WAIT;
         let NewWAIT = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
         if(OldWAIT> NewWAIT.length){
@@ -645,16 +648,7 @@ function Mov(mov) {
     return mov
 }
 
-function DeterminationWild(xP,yP) {
-    if(piratePathOnX !== undefined){
-        if(piratePathOnX>xP) return "W"
-        if(piratePathOnX<xP) return "E"
-        if(piratePathOnY>yP) return "S"
-        if(piratePathOnY>yP) return "N"
-    }
-    piratePathOnX = xP;
-    piratePathOnY = yP;
-}
+
 function pirateRoute(Pirates) {
     if(FLAG === true) return false;
     let flag = 0;
@@ -699,6 +693,17 @@ function pirateRoute(Pirates) {
     return true;
 }
 
+
+function DeterminationWild(xP,yP) {
+    if(piratePathOnX !== undefined){
+        if(piratePathOnX>xP) return "W"
+        if(piratePathOnX<xP) return "E"
+        if(piratePathOnY>yP) return "S"
+        if(piratePathOnY>yP) return "N"
+    }
+    piratePathOnX = xP;
+    piratePathOnY = yP;
+}
 function MinWildOfPortNum(map, x1, y1, x2, y2) { //вычисляет коротчайший путь до порта
     let scripts = [];
 
