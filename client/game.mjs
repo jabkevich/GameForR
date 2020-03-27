@@ -9,7 +9,7 @@ let G;
 let flagBuy;
 let scripts;
 let youHome;
-let Pirates;
+let PiratesC;
 let BeginShipX;
 let BeginShipY;
 let MovesCount;
@@ -25,16 +25,17 @@ let GAME_STATE;
 export function startGame(levelMap, gameState) {
     IDP=0;
     LEN =0;
-    // console.log(gameState);
     scriptsForGoods=0;
     MovesCount=180;
     FLAG = false;
     wild = undefined;
+
     //инцилизация карты
     MainMap =MAP(levelMap);
     //инцилизация карты
-    if(gameState.pirates.length>0){
-        Pirates = gameState.pirates.length;
+    PiratesC = gameState.pirates.length;
+    if(gameState.pirates.length===0){
+        FLAG = true;
     }
 
     //начальные координаты
@@ -47,7 +48,7 @@ export function startGame(levelMap, gameState) {
     pirateRouteY = [];
     PiratesWild = [];
     PiratesR = [];
-    for(let i=0; i<Pirates; i++){
+    for(let i=0; i<PiratesC; i++){
         pirateRouteX[i] = [];
         pirateRouteY[i] = [];
         // pirateRouteX[i][0]
@@ -56,7 +57,7 @@ export function startGame(levelMap, gameState) {
         PiratesR[i] = -1;
     }
 
-    i=-43;
+    i=-1;
     G=0;
     flagBuy=false;
     youHome=true;
@@ -65,71 +66,91 @@ export function startGame(levelMap, gameState) {
 
 
 export function getNextCommand(gameState) {
-    if (i<-42) {
+
+    if (i<0) {
         i++;
         return "WAIT";
     }
     GAME_STATE = gameState;
-    if (!pirateRoute(gameState.pirates)) {
-        FLAG = true;
-    }
-    if(FLAG) {
-        for (let i = 0; i < PiratesR.length; i++) {
-            if (PiratesWild[i].length -1 <= PiratesR[i]) {
-                PiratesR[i] = 0;
-            } else {
-                PiratesR[i]++;
+
+        if (!pirateRoute(gameState.pirates)) {
+            FLAG = true;
+        }
+        if (FLAG) {
+            for (let i = 0; i < PiratesR.length; i++) {
+                if (PiratesWild[i].length - 1 <= PiratesR[i]) {
+                    PiratesR[i] = 0;
+                } else {
+                    PiratesR[i]++;
+                }
             }
         }
-    }
 
-    if (i<-18) {
-        i++;
-        return "WAIT";
-    }
-    if((G>=scriptsForGoods)&&(gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)){
-        G=0;
-        flagBuy=false;
-    }
-    if(!flagBuy) {
-        flagBuy=true;
-        scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
-     }
-    IDP = 3;
-    if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
-        G++;
-        youHome =true;
-        MovesCount--;
-        return "LOAD fish 1"
-        return scripts[G-1];
-    }
-    if((gameState.ship.x === gameState.ports[IDP].x) && (gameState.ship.y ===gameState.ports[IDP].y)&&(G>=scriptsForGoods/2)&&(G<scriptsForGoods)){
-        G++;
-        youHome = false;
-        MovesCount--;
-        return "SELL fish 1"
-        return scripts[G-1];
+    // if((G>=scriptsForGoods)&&(gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)){
+    //     G=0;
+    //     flagBuy=false;
+    // }
+    // if(!flagBuy) {
+    //     flagBuy=true;
+    //     scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
+    //  }
+    IDP = 2;
+    // if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
+    //     G++;
+    //     youHome =true;
+    //     MovesCount--;
+    //     return "LOAD fish 1"
+    //     return scripts[G-1];
+    // }
+    // if((gameState.ship.x === gameState.ports[IDP].x) && (gameState.ship.y ===gameState.ports[IDP].y)&&(G>=scriptsForGoods/2)&&(G<scriptsForGoods)){
+    //     G++;
+    //     youHome = false;
+    //     MovesCount--;
+    //     return "SELL fish 1"
+    //     return scripts[G-1];
+    // }
+    if(gameState.ship.x===gameState.ports[IDP].x && gameState.ship.y===gameState.ports[IDP].y){
+        youHome =  false;
+    }else if(gameState.ship.x===5 && gameState.ship.y===12){
+        youHome =  true;
     }
     if(youHome) {
         wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[IDP].x, gameState.ports[IDP].y)
-        // console.log("Home: " + wild[0])
-        // if(wild[0]===undefined){
-        //     console.log("f")
-        // }
     }else{
-        wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y);
+        wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, 5, 12);
     }
-        let Pirates = famousPiratesWild(gameState, wild);
-        if (Pirates) {
-            // console.log("Pir : "+ Pirates)
-            // if(Pirates==="WAIT"){
-            //     console.log("WAIT")
-            // }
-            return Mov(Pirates);
+    if (PiratesC>0) {
+        if(FLAG) {
+            let map;
+            for (let i = 0; i < PiratesC; i++) {
+                map = MapWithP(MainMap, gameState.pirates[i].x, gameState.pirates[i].y, i)
+            }
+            console.log(map);
+            console.log(PiratesR);
+            console.log(pirateRouteX);
+            console.log(pirateRouteY);
+            console.log(PiratesWild);
+            let NewWild = famousPiratesWild(gameState, wild);
+            return Mov(NewWild);
+        }else{
+            for(let i=0; i<PiratesC; i++) {
+                let problem = (ThereIsAProblem(gameState.ship.x, gameState.ship.y, gameState.pirates[i].x, gameState.pirates[i].y, 2, 2));
+                if (problem) {
+                    let map = MainMap;
+                    for (let i = 0; i < PiratesC; i++) {
+                        map = MapWithP(map, gameState.pirates[i].x, gameState.pirates[i].y, i)
+                    }
+                    if (youHome) {
+                        wild = MinWildOfPortNum(map, gameState.ship.x, gameState.ship.y, gameState.ports[IDP].x, gameState.ports[IDP].y)
+                    } else {
+                        wild = MinWildOfPortNum(map, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y);
+                    }
+                    // console.log(map);
+                    return wild[0]
+                }
+            }
         }
-// if(wild[0]==="WAIT") {
-//     console.log(wild[0]);
-// }
+    }
     return Mov(wild[0]);
 }
 /////////////////////
@@ -485,29 +506,54 @@ function minElm(v, dispnum, not_last){
 
 function MapWithP(MAP, x, y, k) {
     let x1=[];
+    let x2 = [];
     for (let i=0; i<MAP.length; i++) {
         x1[i] = []
+        x2[i] = []
     }
     for(let i=0; i<MAP.length; i++){
         for(let j=0; j<MAP[0].length; j++){
             x1[i][j] = MAP[i][j]
+            x2[i][j] = MAP[i][j]
         }
     }
+    let direction = DeterminationWild(x,y);
     let X1 = 1;
     let X2 = 1;
     let Y1 =1 ;
     let Y2 = 1;
-    if(PiratesWild[k][PiratesR[k]]==="E") X2 = 2;
-    if(PiratesWild[k][PiratesR[k]]==="W") X1 = 2;
-    if(PiratesWild[k][PiratesR[k]]==="S") Y2 = 2;
-    if(PiratesWild[k][PiratesR[k]]==="N") Y1 = 2;
+    if(FLAG) {
+        if (PiratesWild[k][PiratesR[k]] === "E") X2 = 5;
+        if (PiratesWild[k][PiratesR[k]] === "W") X1 = 5;
+        if (PiratesWild[k][PiratesR[k]] === "S") Y2 = 5;
+        if (PiratesWild[k][PiratesR[k]] === "N") Y1 = 5;
+    }else{
+        if (direction === "E") X2 = 2;
+        if (direction === "W") X1 = 2;
+        if (direction === "S") Y2 = 2;
+        if (direction === "N") Y1 = 2;
+    }
+
     for(let i=x-X1; i<=(x+X2); i++){
             x1[y][i] = "#"
     }
     for(let i=y-Y1; i<=(y+Y2); i++){
             x1[i][x] = "#"
     }
-    x1[GAME_STATE.ship.y][GAME_STATE.ship.x ] = "~";
+    x1[GAME_STATE.ship.y][GAME_STATE.ship.x ] = "k";
+    for(let j=0; j<GAME_STATE.ports.length; j++){
+        x1[GAME_STATE.ports[j].y][GAME_STATE.ports[j].x ] = "O";
+        for(let i=GAME_STATE.ports[j].x-1; i<=GAME_STATE.ports[j].x+1; i++){
+            x1[GAME_STATE.ports[j].y][i] = x2[GAME_STATE.ports[j].y][i];
+        }
+        for(let i=GAME_STATE.ports[j].y-1; i<=GAME_STATE.ports[j].y+1; i++){
+            x1[i][GAME_STATE.ports[j].x] = x2[i][GAME_STATE.ports[j].x];
+        }
+    }
+    // console.log("x2" )
+    // console.log(x2)
+    // console.log("x1" )
+    // console.log(x1)
     return x1;
 }
 
@@ -536,9 +582,9 @@ function collisionCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX,
         PirateR +=stop;
     }
     for(let i=0; i<wild.length; i++){
+        k++;
         if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 1, 0)) return [TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR]];
         if(ThereIsAProblem(TempRoutShipX[k], TempRoutShipY[k], TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR], 0, 1)) return [TempRoutPirateX[i+PirateR], TempRoutPirateY[i+PirateR]];
-        k++;
     }
     return false;
 }
@@ -547,19 +593,18 @@ function stopCheck(xS, yS,stop, pirateRouteX, pirateRouteY, PirateR,ShipRouteX, 
 }
 function countCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY){
     let arrboll = [];
-    for(let j=0; j<Pirates; j++) {
+    for(let j=0; j<PiratesC; j++) {
         arrboll[j] = [];
         for (let i = 0; i < wild.length; i++) {
             arrboll[j][i] = -1;
-            if (!(stopCheck(xS, yS, i, pirateRouteX[j], pirateRouteY[j], (PirateR[j] - 1), ShipRouteX, ShipRouteY))) {
-                if(Pirates<2){return i}
+            if (!(stopCheck(xS, yS, i, pirateRouteX[j], pirateRouteY[j], (PirateR[j]), ShipRouteX, ShipRouteY))) {
+                if(PiratesC<2){return i}
                 arrboll[j][i] = i;
             }
         }
     }
-    console.log(arrboll);
     let WAIT = [];
-    for(let i=0; i<Pirates-1; i++){
+    for(let i=0; i<PiratesC-1; i++){
         for(let j=0; j<arrboll[i].length; j++){
             if(arrboll[i][j]>=0 &&arrboll[i+1][j]>=0){
                 WAIT[j] = arrboll[i][j];
@@ -571,28 +616,28 @@ function countCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, Shi
     for(let i=0; i<WAIT.length; i++){
         if(WAIT[i]>=0) return WAIT[i];
     }
-    console.log("-1");
+
     return -1;
 }
 
-function anotherRoute(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, ShipRouteY) {
+function anotherRoute(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteXT, ShipRouteYT) {
+
     let map = MainMap;
     let Pr;
-    for(let i=0; i<Pirates; i++){
-         Pr = collisionCheck(xS, yS, pirateRouteX[i], pirateRouteY[i], PiratesR[i] - 1, ShipRouteX, ShipRouteY);
+    for(let i=0; i<PiratesC; i++){
+         Pr = collisionCheck(xS, yS, pirateRouteX[i], pirateRouteY[i], PiratesR[i], ShipRouteXT, ShipRouteYT);
         if(Pr){
            map = MapWithP(map, Pr[0], Pr[1], i)
         }
     }
-    console.log(map)
-    return MinWildOfPortNum(map, xS, yS, ShipRouteX[ShipRouteX.length-1],ShipRouteY[ShipRouteY.length-1])
+
+
+    return  MinWildOfPortNum(map, xS, yS, ShipRouteXT[ShipRouteXT.length-1],ShipRouteYT[ShipRouteYT.length-1]);
 }
-function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
-    // console.log("x = "  + gameState.ship.x + "; y = " + gameState.ship.y);
-    // console.log("xP = "  + gameState.pirates[0].x + "; yP = " + gameState.pirates[0].y);
+function Hz(gameState) {
     let WAIT;
     let problem = false;
-    for(let i=0; i<Pirates; i++) {
+    for(let i=0; i<PiratesC; i++) {
         problem = (ThereIsAProblem(gameState.ship.x, gameState.ship.y, gameState.pirates[i].x, gameState.pirates[i].y,3, 3));
         if(problem) {problem = i; break;}
     }
@@ -602,53 +647,55 @@ function famousPiratesWild(gameState, PiratesWild) { //знаем путь пи�
     }
     if(problem!==false){
         problem = false;
-        for(let i =0; i<Pirates; i++) {
+        for(let i =0; i<PiratesC; i++) {
             problem = false;
             if (abcCheck(gameState.ship.x, gameState.pirates[i].x, gameState.ports[idp].x) || abcCheck(gameState.ship.y, gameState.pirates[i].y, gameState.ports[idp].y)) {
-                console.log("abcCheck");
                 problem = true;
                 break;
             }
         }
         if(problem) {
             problem = false;
-            for(let i=0; i<Pirates; i++) {
-                if (collisionCheck(gameState.ship.x, gameState.ship.y, pirateRouteX[i], pirateRouteY[i], PiratesR[i] - 1, ShipRouteX, ShipRouteY)) {
-                    console.log("collisionCheck");
+            for(let i=0; i<PiratesC; i++) {
+                if (collisionCheck(gameState.ship.x, gameState.ship.y, pirateRouteX[i], pirateRouteY[i], PiratesR[i] , ShipRouteX, ShipRouteY)) {
                     problem = true;
                     break;
                 }
             }
         }
         if(problem) {
-               WAIT = countCheck(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY)
+            WAIT = countCheck(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY)
         }
     }
-    console.log(WAIT);
-    if(WAIT===undefined){
+    return WAIT;
+}
+function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
+    let WAIT = Hz(gameState);
+    if(WAIT===undefined ||WAIT===0){
+        console.log(wild)
         return wild[0]
     }
     if(WAIT!==-1) {
-        let OldWAIT = wild.length + WAIT;
+        let OldWAIT = wild;
         let NewWAIT = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
-        if(OldWAIT> NewWAIT.length){
+        NewWAIT = Hz(gameState);
+        if(NewWAIT===-1){
+             NewWAIT = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
+        }
+        if(OldWAIT.length+ WAIT> NewWAIT.length){
             return NewWAIT[0]
         }else{
                 return "WAIT"
             }
     }else{
         let NewWAIT = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
-        console.log(NewWAIT);
         return NewWAIT[0]
     }
-
 }
 function Mov(mov) {
     MovesCount--;
     return mov
 }
-
-
 function pirateRoute(Pirates) {
     if(FLAG === true) return false;
     let flag = 0;
