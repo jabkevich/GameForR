@@ -97,7 +97,7 @@ export function getNextCommand(gameState) {
         flagBuy=true;
         scripts= MaxPOfPort(gameState.prices, gameState.goodsInPort, gameState.ports,gameState);
     }
-    // IDP = 4;
+    // IDP = 5;
     // let IDPT = 0;
     if((gameState.ship.x === gameState.ports[0].x) && (gameState.ship.y === gameState.ports[0].y)&&(G<scriptsForGoods/2)){
         G++;
@@ -528,8 +528,8 @@ function MapWithP(MAP, x, y, k) {
     }
     for(let i=0; i<MAP.length; i++){
         for(let j=0; j<MAP[0].length; j++){
-            x1[i][j] = MAP[i][j]
-            x2[i][j] = MAP[i][j]
+            x1[i][j] = MAP[i][j];
+            x2[i][j] = MAP[i][j];
         }
     }
     let direction = DeterminationWild(x,y, k);
@@ -550,10 +550,14 @@ function MapWithP(MAP, x, y, k) {
     }
 
     for(let i=x-X1; i<=(x+X2); i++){
-        x1[y][i] = "#"
+        if(x1[y]!==undefined) {
+            x1[y][i] = "#"
+        }
     }
     for(let i=y-Y1; i<=(y+Y2); i++){
-        x1[i][x] = "#"
+        if(x1[i]!==undefined) {
+            x1[i][x] = "#"
+        }
     }
 
     for(let j=0; j<GAME_STATE.ports.length; j++){
@@ -678,18 +682,21 @@ function HZ(gameState) {
 function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
     let WAIT = HZ (gameState)
     // console.log(WAIT)
-    if(WAIT>0){return "WAIT"}
-    if(WAIT===0||WAIT===undefined){return wild[0]}
+    if(WAIT>0){console.log("WAIT 1");return "WAIT"}
+    if(WAIT===0||WAIT===undefined){console.log("WAIT 2 "); return wild[0]}
     if(WAIT === -1){
         let anotherWild = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
         WAIT = HZ (gameState)
         if(WAIT===-1){
-            return "WAIT";
+            if(wild[0]==="S"){return 'N'}
+            if(wild[0]==="N"){return 'S'}
         }
         // console.log(anotherWild)
         if(anotherWild===false||anotherWild===undefined){
+            console.log("WAIT 4");
             return "WAIT"
         }
+        console.log("WAIT 5");
         return anotherWild[0];
     }
     if(WAIT>0){
@@ -697,16 +704,20 @@ function famousPiratesWild(gameState, PiratesWild) { //знаем путь пи�
         if(wild.length+WAIT>anotherWild.length) {
             WAIT = HZ(gameState)
             if (WAIT === 0 || WAIT === undefined) {
+                console.log("WAIT 6");
                 return anotherWild[0]
             } else {
+                console.log("WAIT 7");
                 return  "WAIT"
             }
         }else{
+            console.log("WAIT 8");
             return  "WAIT"
         }
     }
 }
 function Mov(mov) {
+    console.log(mov)
     MovesCount--;
     return mov
 }
