@@ -22,6 +22,9 @@ let PiratesR;
 let FLAG;
 let wild;
 let GAME_STATE;
+let previousMoveX;
+let previousMoveY;
+let backWILD;
 export function startGame(levelMap, gameState) {
     IDP=0;
     LEN =0;
@@ -37,10 +40,14 @@ export function startGame(levelMap, gameState) {
     if(gameState.pirates.length===0){
         FLAG = true;
     }
-
+    previousMoveX=[]
+    previousMoveY=[]
+    backWILD=[]
     //начальные координаты
     BeginShipX = gameState.ship.x;
     BeginShipY = gameState.ship.y;
+    previousMoveX[0] = gameState.ship.x;
+    previousMoveY[0]  = gameState.ship.y;
     //начальные координаты
 
     //пиратские маршруты
@@ -124,7 +131,6 @@ export function getNextCommand(gameState) {
         wild = MinWildOfPortNum(MainMap, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y);
     }
     if (PiratesC>0) {
-
         if(FLAG) {
 
             let map;
@@ -140,24 +146,24 @@ export function getNextCommand(gameState) {
             return Mov(NewWild);
         }else{
             // console.log("WAIT")
-            // return "WAIT"
+            // return Mov("WAIT")
             for(let i=0; i<PiratesC; i++) {
-                let problem = (ThereIsAProblem(gameState.ship.x, gameState.ship.y, gameState.pirates[i].x, gameState.pirates[i].y, 2, 2));
-                if (problem) {
-                    let map = MainMap;
-                    for (let i = 0; i < PiratesC; i++) {
-                        map = MapWithP(map, gameState.pirates[i].x, gameState.pirates[i].y, i)
+                    let problem = (ThereIsAProblem(gameState.ship.x, gameState.ship.y, gameState.pirates[i].x, gameState.pirates[i].y, 2, 2));
+                    if (problem) {
+                        let map = MainMap;
+                        for (let i = 0; i < PiratesC; i++) {
+                            map = MapWithP(map, gameState.pirates[i].x, gameState.pirates[i].y, i)
+                        }
+                        // console.log(map)
+                        if (youHome) {
+                            wild = MinWildOfPortNum(map, gameState.ship.x, gameState.ship.y, gameState.ports[IDP].x, gameState.ports[IDP].y)
+                        } else {
+                            wild = MinWildOfPortNum(map, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y);
+                        }
+                        // console.log(wild);
+                        if(wild===false){return "WAIT"}
+                        return Mov(wild[0])
                     }
-                    // console.log(map)
-                    if (youHome) {
-                        wild = MinWildOfPortNum(map, gameState.ship.x, gameState.ship.y, gameState.ports[IDP].x, gameState.ports[IDP].y)
-                    } else {
-                        wild = MinWildOfPortNum(map, gameState.ship.x, gameState.ship.y, gameState.ports[0].x, gameState.ports[0].y);
-                    }
-                    // console.log(wild);
-                    if(wild===false){return "WAIT"}
-                    return Mov(wild[0])
-                }
             }
         }
     }
@@ -519,7 +525,8 @@ function minElm(v, dispnum, not_last){
  * @return {string}
  */
 
-function MapWithP(MAP, x, y, k) {
+function MapWithP(MAP, x, y, k, mod) {
+    if(mod===undefined){mod =true}
     let x1=[];
     let x2 = [];
     for (let i=0; i<MAP.length; i++) {
@@ -532,23 +539,25 @@ function MapWithP(MAP, x, y, k) {
             x2[i][j] = MAP[i][j];
         }
     }
-    let direction = DeterminationWild(x,y, k);
     let X1 = 1;
     let X2 = 1;
-    let Y1 =1 ;
+    let Y1 = 1;
     let Y2 = 1;
-    if(FLAG) {
-        if (PiratesWild[k][PiratesR[k]] === "E") X2 = 2;
-        if (PiratesWild[k][PiratesR[k]] === "W") X1 = 2;
-        if (PiratesWild[k][PiratesR[k]] === "S") Y2 = 2;
-        if (PiratesWild[k][PiratesR[k]] === "N") Y1 = 2;
-    }else{
-        if (direction === "E") X2 = 2;
-        if (direction === "W") X1 = 2;
-        if (direction === "S") Y2 = 2;
-        if (direction === "N") Y1 = 2;
-    }
+    if(mod) {
+        let direction = DeterminationWild(x, y, k);
 
+        if (FLAG) {
+            if (PiratesWild[k][PiratesR[k]] === "E") X2 = 2;
+            if (PiratesWild[k][PiratesR[k]] === "W") X1 = 2;
+            if (PiratesWild[k][PiratesR[k]] === "S") Y2 = 2;
+            if (PiratesWild[k][PiratesR[k]] === "N") Y1 = 2;
+        } else {
+            if (direction === "E") X2 = 2;
+            if (direction === "W") X1 = 2;
+            if (direction === "S") Y2 = 2;
+            if (direction === "N") Y1 = 2;
+        }
+    }
     for(let i=x-X1; i<=(x+X2); i++){
         if(x1[y]!==undefined) {
             x1[y][i] = "#"
@@ -580,6 +589,9 @@ function MapWithP(MAP, x, y, k) {
 /**
  * @return {boolean}
  */
+function previousMove() {
+
+}
 function ThereIsAProblem (xS, yS, xP, yP, x,y){ // провека, входит ли пират в зону n клеток
     if((Math.abs(yP-yS) <=y && Math.abs(xP-xS) <=x)) return true;
     else return false;
@@ -623,10 +635,9 @@ function countCheck(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, Shi
             }
         }
     }
-    let WAIT = [];
-    for(let i=0; i<arrboll[0].length; i++){
-        WAIT[i] = arrboll[i];
-    }
+
+
+    let WAIT = arrboll[0].slice();
     for(let i=0; i<PiratesC-1; i++){
         for(let j=0; j<arrboll[i].length; j++){
             if(WAIT[j]>=0 && arrboll[i+1][j]>=0){
@@ -646,7 +657,6 @@ function MapForWild(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteXT, Sh
     let Pr;
     for(let i=0; i<PiratesC; i++){
         map = MapWithP(map, pirateRouteX[i],pirateRouteY[i], i);
-
         Pr = collisionCheck(xS, yS, pirateRouteX[i], pirateRouteY[i], PiratesR[i], ShipRouteXT, ShipRouteYT);
         if (Pr) {
             map = MapWithP(map, Pr[0], Pr[1], i)
@@ -678,46 +688,78 @@ function HZ(gameState) {
             }
         }
     }
+    return 0
 }
 function famousPiratesWild(gameState, PiratesWild) { //знаем путь пиратов.
     let WAIT = HZ (gameState)
     // console.log(WAIT)
-    if(WAIT>0){console.log("WAIT 1");return "WAIT"}
-    if(WAIT===0||WAIT===undefined){console.log("WAIT 2 "); return wild[0]}
+    if(WAIT===0||WAIT===undefined){ return wild[0]}
     if(WAIT === -1){
         let anotherWild = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
-        WAIT = HZ (gameState)
+        WAIT = HZ (gameState);
         if(WAIT===-1){
-            if(wild[0]==="S"){return 'N'}
-            if(wild[0]==="N"){return 'S'}
+            console.log(WAIT)
+            let x = gameState.ship.x
+            let y = gameState.ship.y
+            let map = MainMap;
+            for(let i =0; i<PiratesC; i++){
+                map = MapWithP(map, gameState.pirates[i].x, gameState.pirates[i].y, i, false)
+            }
+            if(map[previousMoveY[previousMoveY.length-1]][previousMoveX[previousMoveX.length-1]]!=="#") {
+                return backWILD[backWILD.length - 1]
+            }
+            if(map[y][x-1]!=="#")return "W";
+            if(map[y][x+1]!=="#")return "E";
+            if(map[y+1][x]!=="#")return "S";
+            if(map[y-1][x]!=="#")return "N";
         }
         // console.log(anotherWild)
         if(anotherWild===false||anotherWild===undefined){
-            console.log("WAIT 4");
+            // console.log("WAIT 4");
             return "WAIT"
         }
-        console.log("WAIT 5");
+        // console.log("WAIT 5");
         return anotherWild[0];
     }
     if(WAIT>0){
         let anotherWild = anotherRoute(gameState.ship.x, gameState.ship.y, pirateRouteX, pirateRouteY, PiratesR, ShipRouteX, ShipRouteY);
         if(wild.length+WAIT>anotherWild.length) {
-            WAIT = HZ(gameState)
+            WAIT = HZ(gameState);
+            if(WAIT===-1){
+                console.log(WAIT)
+                let x = gameState.ship.x
+                let y = gameState.ship.y
+                let map = MainMap;
+                for(let i =0; i<PiratesC; i++){
+                    map = MapWithP(map, gameState.pirates[i].x, gameState.pirates[i].y, i, false)
+                }
+                if(map[previousMoveY[previousMoveY.length-1]][previousMoveX[previousMoveX.length-1]]!=="#") {
+                    return backWILD[backWILD.length - 1]
+                }
+                if(map[y][x-1]!=="#")return "W";
+                if(map[y][x+1]!=="#")return "E";
+                if(map[y+1][x]!=="#")return "S";
+                if(map[y-1][x]!=="#")return "N";
+            }
             if (WAIT === 0 || WAIT === undefined) {
-                console.log("WAIT 6");
+                // console.log("WAIT 6");
                 return anotherWild[0]
             } else {
-                console.log("WAIT 7");
+                // console.log("WAIT 7");
                 return  "WAIT"
             }
         }else{
-            console.log("WAIT 8");
+            // console.log("WAIT 8");
             return  "WAIT"
         }
     }
 }
 function Mov(mov) {
-    console.log(mov)
+    if(mov!=="WAIT"){
+        previousMoveX[previousMoveX.length] = GAME_STATE.ship.x;
+        previousMoveY[previousMoveY.length] = GAME_STATE.ship.y;
+        backWILD[backWILD.length] = (mov ==="E") ? "W" : (mov ==="E") ? "W" : (mov ==="S") ?  "N" : "S" ;
+    }
     MovesCount--;
     return mov
 }
