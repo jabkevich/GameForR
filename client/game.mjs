@@ -155,7 +155,7 @@ export function getNextCommand(gameState) {
                         if (problem) {
                             let map = MainMap;
                             for (let i = 0; i < PiratesC; i++) {
-                                map = MapWithP(map, gameState.pirates[i].x, gameState.pirates[i].y, i, true)
+                                map = MapWithP(map, gameState.pirates[i].x, gameState.pirates[i].y, i, false, gameState.ship.x,gameState.ship.y)
                             }
                             // console.log(map)
                             if (youHome) {
@@ -531,7 +531,7 @@ function minElm(v, dispnum, not_last){
  * @return {string}
  */
 
-function MapWithP(MAP, x, y, k, mod) {
+function MapWithP(MAP, x, y, k, mod, xS, yS) {
     if (mod === undefined) {
         mod = true
     }
@@ -569,12 +569,60 @@ function MapWithP(MAP, x, y, k, mod) {
     }
     for(let i=x-X1; i<=(x+X2); i++){
         if(x1[y]!==undefined) {
-            x1[y][i] = "#"
+            if(Math.abs(x-xS)<1 &&!(Math.abs(y-yS)>0) ) {
+                x1[y][i] = "#"
+            }
         }
     }
     for(let i=y-Y1; i<=(y+Y2); i++){
         if(x1[i]!==undefined) {
+            if(Math.abs(y-yS)<1 &&!(Math.abs(x-xS)>0) ) {
             x1[i][x] = "#"
+            }
+        }
+    }
+    if(x===xS&&(y+2===yS)){
+        x1[y+1][x] = "#";
+    }
+    if(x===xS&&(y-2===yS)){
+        x1[y-1][x] = "#";
+    }
+    if(x+2===xS&&(y===yS)){
+        x1[y][x+1] = "#";
+    }
+    if(x-2===xS&&(y===yS)){
+        x1[y][x-1] = "#";
+    }
+    if(y-1===yS&&(x+1===xS||x-1===xS)){
+        if(x+1===xS){
+            x1[y][x+1] = "#";
+        }
+        if(x-1===xS){
+            x1[y][x-1] = "#";
+        }
+    }
+    if(y+1===yS&&(x+1===xS||x-1===xS)){
+        if(x+1===xS){
+            x1[y][x+1] = "#";
+        }
+        if(x-1===xS){
+            x1[y][x-1] = "#";
+        }
+    }
+    if(x+1===xS&&(y+1===yS||y-1===yS)){
+        if(y+1===yS){
+            x1[y+1][x] = "#";
+        }
+        if(y-1===yS){
+            x1[y-1][x] = "#";
+        }
+    }
+    if(x-1===xS&&(y+1===yS||y-1===yS)){
+        if(y+1===yS){
+            x1[y+1][x] = "#";
+        }
+        if(y-1===yS){
+            x1[y-1][x] = "#";
         }
     }
 
@@ -595,6 +643,7 @@ function MapWithP(MAP, x, y, k, mod) {
     for(let j=0; j<GAME_STATE.ports.length; j++) {
         x1[GAME_STATE.ports[j].y][GAME_STATE.ports[j].x] = "O";
     }
+    x1[y][x] = "#";
     return x1;
 }
 
@@ -660,11 +709,13 @@ function MapForWild(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteX, Shi
     for(let i=0; i<PiratesC; i++){
         let ShipRouteXTemp = ShipRouteX.slice()
         let ShipRouteYTemp = ShipRouteY.slice()
-        map = MapWithP(map, pirateRouteX[i][PirateR[i]+stop],pirateRouteY[i][PirateR[i]+stop], i);
+        pirateRouteX[i] = pirateRouteX[i].slice(0, pirateRouteX[i].length - 1).concat(pirateRouteX[i]);
+        pirateRouteY[i] = pirateRouteY[i].slice(0, pirateRouteY[i].length - 1).concat(pirateRouteY[i]);
+        map = MapWithP(map, pirateRouteX[i][PirateR[i]+stop],pirateRouteY[i][PirateR[i]+stop], i, false, xS,yS);
         for(let j=0; j<wild.length; j++) {
             Pr = collisionCheck(pirateRouteX[i], pirateRouteY[i], (PirateR[i]+j), ShipRouteXTemp, ShipRouteYTemp);
             if (Pr) {
-                map = MapWithP(map, Pr[0], Pr[1], i)
+                map = MapWithP(map, Pr[0], Pr[1], i, false, xS, yS)
             }
             // pirateRouteX[i].splice(0,1)
             // pirateRouteY[i].splice(0,1)
@@ -685,6 +736,16 @@ function anotherRoute(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteXT, 
         map = MapForWild(xS, yS, pirateRouteX, pirateRouteY, PirateR, ShipRouteXT, ShipRouteYT, stop);
         fl = MinWildOfPortNum(map, xS, yS, GAME_STATE.ports[IDP].x, GAME_STATE.ports[IDP].y, true);
         if(fl===false){
+            map = MainMap
+            for(let i=0; i<PiratesC; i++) {
+                if(ThereIsAProblem(xS, yS, GAME_STATE.pirates[i].x,GAME_STATE.pirates[i].y, 1,1)){
+                    map = MapWithP(map, GAME_STATE.pirates[i].x,GAME_STATE.pirates[i].y, i, false, xS, yS)
+                }
+            }
+            fl = MinWildOfPortNum(map, xS, yS, GAME_STATE.ports[IDP].x, GAME_STATE.ports[IDP].y);
+            if(fl!==false){
+                return fl[0];
+            }
             stop++;
             ShipRouteXT = [xS].concat(ShipRouteXT);
             ShipRouteYT = [yS].concat(ShipRouteYT);
@@ -722,7 +783,7 @@ function ChekPiratesProblem(gameState) {
     let xS = gameState.ship.x;
     let yS = gameState.ship.y;
     for(let i=0; i<PiratesC; i++) {
-       if( ThereIsAProblem(xS, yS, gameState.pirates[i].x, gameState.pirates[i].y, 3, 3)) return true;
+       if( ThereIsAProblem(xS, yS, gameState.pirates[i].x, gameState.pirates[i].y, 7, 7)) return true;
     }
 }
 function ChekPiratesColision(gameState,ShipRouteX,ShipRouteY){
@@ -738,6 +799,7 @@ function WildForPirates(gameState) {
     let ShipRouteX = Res[1].slice()
     let ShipRouteY = Res[2].slice()
     let WAIT = 0;
+    pirateRouteX.slice(0, pirateRouteX.length - 1).concat(pirateRouteX);
     let pirateRoteXTemp =JSON.parse(JSON.stringify(pirateRouteX));
     let pirateRoteYTemp = JSON.parse(JSON.stringify(pirateRouteY));
     let PiratesRTemp = JSON.parse(JSON.stringify(PiratesR));
@@ -753,7 +815,7 @@ function WildForPirates(gameState) {
     }
     let map = MainMap;
     for(let i=0; i<PiratesC; i++){
-        map = MapWithP(map, gameState.pirates[i].x,gameState.pirates[i].y, i, true);
+        map = MapWithP(map, gameState.pirates[i].x,gameState.pirates[i].y, i, true, gameState.ship.x,gameState.ship.y);
     }
     if(WAIT===0){return wild[0]}
     if(WAIT>0){
